@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Trading AI — Data-driven analysis platform for Indian Stocks & Crypto" />
+  <title>Trading AI — Smart Analysis Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="app">
+    <!-- Top Navigation Bar -->
+    <header id="top-bar">
+      <div class="logo-section">
+        <div class="logo-icon">📊</div>
+        <h1 class="logo-text">Trading<span class="accent">AI</span></h1>
+      </div>
+      <div class="search-section">
+        <div class="search-box" id="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="symbol-search" placeholder="Search stocks or crypto... (e.g., RELIANCE, BTCUSDT)" autocomplete="off" />
+          <div id="search-results" class="search-results hidden"></div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="market-toggle" id="market-toggle">
+          <button class="toggle-btn active" data-market="stock">🇮🇳 Stocks</button>
+          <button class="toggle-btn" data-market="crypto">₿ Crypto</button>
+        </div>
+        <div class="scanner-status" id="scanner-status">
+          <span class="pulse-dot"></span>
+          <span class="status-text">Scanner Active</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main id="main-content">
+      <!-- Left Sidebar: Watchlist & Signals -->
+      <aside id="left-panel">
+        <div class="panel-tabs">
+          <button class="tab-btn active" data-tab="signals">⚡ Signals</button>
+          <button class="tab-btn" data-tab="watchlist">👁 Watchlist</button>
+          <button class="tab-btn" data-tab="scanner">🔍 Scanner</button>
+        </div>
+        <div id="tab-signals" class="tab-content active">
+          <div class="signals-header">
+            <h3>Active Signals</h3>
+            <span class="signal-count" id="signal-count">0</span>
+          </div>
+          <div id="signal-list" class="signal-list">
+            <div class="empty-state">
+              <p>🔄 Scanner is analyzing markets...</p>
+              <p class="sub">Signals will appear here automatically</p>
+            </div>
+          </div>
+        </div>
+        <div id="tab-watchlist" class="tab-content">
+          <div class="watchlist-header">
+            <h3>Watchlist</h3>
+            <button id="add-watchlist-btn" class="icon-btn" title="Add symbol">+</button>
+          </div>
+          <div id="watchlist" class="watchlist-items"></div>
+        </div>
+        <div id="tab-scanner" class="tab-content">
+          <div class="scanner-header">
+            <h3>Market Scanner</h3>
+            <button id="run-scan-btn" class="btn-small btn-accent">Scan Now</button>
+          </div>
+          <div class="scanner-filters">
+            <select id="scan-direction">
+              <option value="">All</option>
+              <option value="BUY">Buy Only</option>
+              <option value="SELL">Sell Only</option>
+            </select>
+          </div>
+          <div id="scanner-results" class="scanner-list"></div>
+        </div>
+      </aside>
+
+      <!-- Center: Chart Area -->
+      <section id="chart-section">
+        <!-- Chart Controls -->
+        <div class="chart-controls">
+          <div class="symbol-info" id="symbol-info">
+            <span class="symbol-name" id="current-symbol">RELIANCE</span>
+            <span class="symbol-price" id="current-price">—</span>
+            <span class="symbol-change" id="current-change">—</span>
+            <span class="live-badge hidden" id="live-badge"><span class="live-dot"></span>LIVE</span>
+          </div>
+          <div class="timeframe-selector" id="timeframe-selector">
+            <button class="tf-btn" data-tf="1m">1m</button>
+            <button class="tf-btn" data-tf="5m">5m</button>
+            <button class="tf-btn" data-tf="15m">15m</button>
+            <button class="tf-btn" data-tf="1h">1H</button>
+            <button class="tf-btn" data-tf="4h">4H</button>
+            <button class="tf-btn active" data-tf="1d">1D</button>
+            <button class="tf-btn" data-tf="1wk">1W</button>
+          </div>
+          <div class="chart-actions">
+            <span class="data-source" id="data-source"></span>
+            <button id="btn-indicators" class="btn-tool" title="Indicators">📈 Indicators</button>
+            <button id="btn-backtest" class="btn-tool" title="Backtest">🧪 Backtest</button>
+          </div>
+        </div>
+        <!-- Chart Container -->
+        <div id="chart-container"></div>
+        <!-- Indicator Panes -->
+        <div id="rsi-container" class="indicator-pane hidden"></div>
+        <div id="macd-container" class="indicator-pane hidden"></div>
+      </section>
+
+      <!-- Right Sidebar: Analysis & Backtest -->
+      <aside id="right-panel">
+        <div class="panel-tabs">
+          <button class="tab-btn active" data-tab="analysis">📊 Analysis</button>
+          <button class="tab-btn" data-tab="backtest">🧪 Backtest</button>
+        </div>
+        <div id="tab-analysis" class="tab-content active">
+          <div class="verdict-card" id="verdict-card">
+            <div class="verdict-label">Verdict</div>
+            <div class="verdict-value" id="verdict-value">—</div>
+            <div class="verdict-sub" id="verdict-sub">Load a symbol to analyze</div>
+            <div class="verdict-actions" id="verdict-actions">
+              <button id="sim-buy-btn" class="btn-small btn-buy">Simulate BUY</button>
+              <button id="sim-sell-btn" class="btn-small btn-sell">Simulate SELL</button>
+            </div>
+          </div>
+          
+          <!-- Active Trade Panel -->
+          <div id="active-trade-panel" class="active-trade-panel hidden">
+            <div class="at-header">
+              <span class="at-title">Active Trade</span>
+              <span id="at-type" class="at-badge">BUY</span>
+            </div>
+            <div class="at-grid">
+              <div class="at-item"><span class="at-label">Entry</span><span id="at-entry" class="at-val">—</span></div>
+              <div class="at-item"><span class="at-label">Current</span><span id="at-curr" class="at-val">—</span></div>
+              <div class="at-item"><span class="at-label">PnL</span><span id="at-pnl" class="at-val">—</span></div>
+            </div>
+            <button id="close-trade-btn" class="btn-primary btn-full btn-danger">Close Position</button>
+          </div>
+          <div class="multi-tf-strip hidden" id="multi-tf-strip">
+            <div class="mtf-header">
+              <span class="mtf-title">Multi-Timeframe</span>
+              <span class="mtf-info" title="Different timeframes can show different signals. Confluence across multiple timeframes is stronger.">ℹ️</span>
+            </div>
+            <div class="mtf-grid" id="mtf-grid"></div>
+          </div>
+          <div class="analysis-signals" id="analysis-signals"></div>
+          <div class="indicator-values" id="indicator-values"></div>
+          <div class="data-disclaimer" id="data-disclaimer">
+            <span>📊 Analysis based on historical OHLCV data — not financial advice</span>
+          </div>
+        </div>
+        <div id="tab-backtest" class="tab-content">
+          <div class="backtest-config">
+            <h3>Backtest Strategy</h3>
+            <div class="form-group">
+              <label>Strategy</label>
+              <select id="bt-strategy">
+                <option value="ema_9_21">EMA 9/21 Crossover</option>
+                <option value="ema_50_200">EMA 50/200 Golden Cross</option>
+                <option value="rsi_reversion">RSI Mean Reversion</option>
+                <option value="bollinger_bounce">Bollinger Bounce</option>
+                <option value="macd_cross">MACD Signal Cross</option>
+                <option value="supertrend">Supertrend Follower</option>
+                <option value="breakout_20">20-Period Breakout</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Capital (₹)</label>
+              <input type="number" id="bt-capital" value="100000" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Stop Loss %</label>
+                <input type="number" id="bt-sl" value="2" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label>Take Profit %</label>
+                <input type="number" id="bt-tp" value="5" step="0.5" />
+              </div>
+            </div>
+            <button id="run-backtest-btn" class="btn-primary">▶ Run Backtest</button>
+          </div>
+          <div id="backtest-results" class="backtest-results hidden">
+            <h3>Results</h3>
+            <div id="bt-metrics" class="bt-metrics"></div>
+            <div id="bt-trades" class="bt-trades"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Indicator Modal -->
+    <div id="indicator-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Technical Indicators</h2>
+          <button class="modal-close" id="close-indicators">&times;</button>
+        </div>
+        <div class="modal-body" id="indicator-list"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
