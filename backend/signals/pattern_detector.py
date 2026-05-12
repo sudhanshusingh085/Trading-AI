@@ -79,6 +79,7 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
                     "timestamp": ts,
                     "price": latest_price
                 })
+                
 
     # ─── HORIZONTAL BREAKOUTS ───
     if len(pivots["highs"]) >= 3:
