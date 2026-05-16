@@ -26,20 +26,22 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
     Detects 15+ chart patterns including Triangles, Wedges, Head & Shoulders, etc.
     Returns list of signal dicts with historical probabilities.
     """
-    if len(candles) < 50:
+    # Filter out invalid candles
+    valid_candles = [c for c in candles if c.get("close") is not None and c.get("high") is not None and c.get("low") is not None]
+    if len(valid_candles) < 30:
         return []
     
-    closes = [c["close"] for c in candles]
-    highs = [c["high"] for c in candles]
-    lows = [c["low"] for c in candles]
+    closes = [c["close"] for c in valid_candles]
+    highs = [c["high"] for c in valid_candles]
+    lows = [c["low"] for c in valid_candles]
     
     pivots = find_pivots(closes, window=7)
     signals = []
     
     latest_price = closes[-1]
-    ts = candles[-1]["timestamp"]
-
-    # ─── DOUBLE BOTTOM (Prob: 78%) ───
+    ts = valid_candles[-1]["timestamp"]
+    
+    # ─── DOUBLE BOTTOM DETECTION ───
     if len(pivots["lows"]) >= 2:
         l1_idx, l2_idx = pivots["lows"][-1], pivots["lows"][-2]
         l1_val, l2_val = closes[l1_idx], closes[l2_idx]
