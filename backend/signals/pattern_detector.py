@@ -25,18 +25,20 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
     Detect Double Top, Double Bottom, and Breakouts.
     Returns list of signal dicts.
     """
-    if len(candles) < 30:
+    # Filter out invalid candles
+    valid_candles = [c for c in candles if c.get("close") is not None and c.get("high") is not None and c.get("low") is not None]
+    if len(valid_candles) < 30:
         return []
     
-    closes = [c["close"] for c in candles]
-    highs = [c["high"] for c in candles]
-    lows = [c["low"] for c in candles]
+    closes = [c["close"] for c in valid_candles]
+    highs = [c["high"] for c in valid_candles]
+    lows = [c["low"] for c in valid_candles]
     
     pivots = find_pivots(closes)
     signals = []
     
     latest_price = closes[-1]
-    ts = candles[-1]["timestamp"]
+    ts = valid_candles[-1]["timestamp"]
     
     # ─── DOUBLE BOTTOM DETECTION ───
     if len(pivots["lows"]) >= 2:

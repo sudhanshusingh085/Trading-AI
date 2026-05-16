@@ -20,6 +20,11 @@ let lastCandleCount = 0;
 let updateRequested = false;
 let throttleTimer = null;
 
+// Active trade state
+let activeTrade = null;
+let signalPollingTimer = null;
+let currentATR = 0;
+
 // ─── INIT ───
 document.addEventListener('DOMContentLoaded', () => {
   initChart();
@@ -208,6 +213,32 @@ function renderAnalysis(data) {
   const sell_c = data.signals?.length ? data.signals[0].sell_confluence || 0 : 0;
   document.getElementById('verdict-sub').textContent = `Buy strength: ${buy_c} | Sell strength: ${sell_c}`;
   const sEl = document.getElementById('analysis-signals');
+  
+  // Extract ATR for dynamic targets
+  if (data.indicators && data.indicators.atr && data.indicators.atr.length > 0) {
+    currentATR = data.indicators.atr[data.indicators.atr.length - 1].value;
+  }
+
+  // Update AI ML Prediction Panel
+  const aiCard = document.getElementById('ai-prediction-card');
+  let hasAiProb = false;
+  if (data.signals && data.signals.length > 0 && data.signals[0].ml_prob) {
+    const ml = data.signals[0].ml_prob;
+    if (ml.up > 0 || ml.down > 0) {
+      hasAiProb = true;
+      document.getElementById('ai-bar-up').style.width = `${ml.up}%`;
+      document.getElementById('ai-bar-down').style.width = `${ml.down}%`;
+      document.getElementById('ai-label-up').textContent = `${ml.up.toFixed(1)}% UP`;
+      document.getElementById('ai-label-down').textContent = `${ml.down.toFixed(1)}% DOWN`;
+    }
+  }
+  
+  if (hasAiProb) {
+    aiCard.classList.remove('hidden');
+  } else {
+    aiCard.classList.add('hidden');
+  }
+
   if (!data.signals || !data.signals.length) { sEl.innerHTML = '<div class="empty-state"><p>No active signals</p></div>'; return; }
   sEl.innerHTML = data.signals.slice(0, 8).map(s => renderSignalCard(s, currentSymbol)).join('');
 }
@@ -286,6 +317,115 @@ function setupEventListeners() {
 
   // Scanner
   document.getElementById('run-scan-btn').addEventListener('click', triggerScan);
+
+  // Simulation
+  document.getElementById('sim-buy-btn').addEventListener('click', () => startSimulation('BUY'));
+  document.getElementById('sim-sell-btn').addEventListener('click', () => startSimulation('SELL'));
+  document.getElementById('close-trade-btn').addEventListener('click', closeSimulation);
+}
+
+// ─── SIMULATION & TOASTS ───
+function startSimulation(type) {
+  if (!lastLivePrice) {
+    showToast('Error', 'Wait for live price data to load.', 'error');
+    return;
+  }
+  
+  // Calculate dynamic exits based on ATR (fallback to simple % if ATR is missing)
+  const entry = lastLivePrice;
+  let tp, sl;
+  if (currentATR > 0) {
+    if (type === 'BUY') {
+      tp = entry + (2.5 * currentATR);
+      sl = entry - (1.5 * currentATR);
+    } else {
+      tp = entry - (2.5 * currentATR);
+      sl = entry + (1.5 * currentATR);
+    }
+  } else {
+    // Fallback if no ATR
+    if (type === 'BUY') {
+      tp = entry * 1.02;
+      sl = entry * 0.99;
+    } else {
+      tp = entry * 0.98;
+      sl = entry * 1.01;
+    }
+  }
+  
+  activeTrade = { type, entry, tp, sl };
+  
+  // Set Expected Holding Time based on interval
+  let holdingTime = "1-3 Days";
+  if (['1m', '3m', '5m'].includes(currentInterval)) holdingTime = "10-30 Minutes";
+  else if (['15m', '30m'].includes(currentInterval)) holdingTime = "2-5 Hours";
+  else if (['1d', '1w'].includes(currentInterval)) holdingTime = "Weeks to Months";
+
+  document.getElementById('at-holding-time').textContent = holdingTime;
+  document.getElementById('at-type').textContent = type;
+  document.getElementById('at-type').className = `at-badge ${type.toLowerCase()}`;
+  document.getElementById('at-entry').textContent = formatPrice(entry);
+  document.getElementById('at-curr').textContent = formatPrice(entry);
+  document.getElementById('at-target').textContent = formatPrice(tp);
+  document.getElementById('at-stop').textContent = formatPrice(sl);
+  document.getElementById('at-pnl').textContent = '0.00%';
+  document.getElementById('at-pnl').className = 'at-val';
+  document.getElementById('active-trade-panel').classList.remove('hidden');
+  showToast('Trade Opened', `Simulated ${type} executed at ${formatPrice(entry)}`, 'success');
+}
+
+function updateSimulationPnl(currentPrice) {
+  if (!activeTrade) return;
+  document.getElementById('at-curr').textContent = formatPrice(currentPrice);
+  const entry = activeTrade.entry;
+  let pnlPct = 0;
+  if (activeTrade.type === 'BUY') {
+    pnlPct = ((currentPrice - entry) / entry) * 100;
+  } else {
+    pnlPct = ((entry - currentPrice) / entry) * 100;
+  }
+  const pnlEl = document.getElementById('at-pnl');
+  pnlEl.textContent = `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%`;
+  pnlEl.className = `at-val ${pnlPct >= 0 ? 'positive' : 'negative'}`;
+  
+  // Dynamic exit logic
+  if (activeTrade.type === 'BUY') {
+    if (currentPrice >= activeTrade.tp) {
+      showToast('Take Profit Hit 🎯', `Trade closed in profit! (+${pnlPct.toFixed(2)}%)`, 'success');
+      closeSimulation();
+    } else if (currentPrice <= activeTrade.sl) {
+      showToast('Stop Loss Hit 🛑', `Trade closed in loss. (${pnlPct.toFixed(2)}%)`, 'error');
+      closeSimulation();
+    }
+  } else {
+    if (currentPrice <= activeTrade.tp) {
+      showToast('Take Profit Hit 🎯', `Trade closed in profit! (+${pnlPct.toFixed(2)}%)`, 'success');
+      closeSimulation();
+    } else if (currentPrice >= activeTrade.sl) {
+      showToast('Stop Loss Hit 🛑', `Trade closed in loss. (${pnlPct.toFixed(2)}%)`, 'error');
+      closeSimulation();
+    }
+  }
+}
+
+function closeSimulation() {
+  if (!activeTrade) return;
+  const pnlStr = document.getElementById('at-pnl').textContent;
+  showToast('Trade Closed', `Position closed with PnL: ${pnlStr}`, 'warning');
+  activeTrade = null;
+  document.getElementById('active-trade-panel').classList.add('hidden');
+}
+
+function showToast(title, msg, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-title">${title}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
 }
 
 // ─── SEARCH ───
@@ -484,6 +624,8 @@ function connectLiveStream(symbol) {
           void priceEl.offsetWidth;
           priceEl.classList.add(price > oldPrice ? 'price-flash-up' : 'price-flash-down');
         }
+        
+        updateSimulationPnl(price);
 
         // Update or create live candle
         if (!liveCandle || candleStart !== liveCandleStart) {
@@ -542,9 +684,41 @@ function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(() => {
     if (currentMarket === 'crypto' && currentSymbol) {
-      loadSymbol(currentSymbol, currentMarket);
+      pollSignals();
     }
-  }, 30000);
+  }, 5000); // Poll signals every 5s instead of full reload
+}
+
+async function pollSignals() {
+  try {
+    const url = `${API}/api/crypto/${currentSymbol}/analysis?interval=${currentInterval}&limit=100`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) return;
+    
+    // Check for strong signals to alert
+    const signals = data.signals || [];
+    for (const sig of signals) {
+      if (sig.strength >= 4 && !sig.alerted) {
+        // Only alert if we haven't seen it recently
+        const recentAlerts = window._recentAlerts || new Set();
+        const alertKey = `${sig.name}_${sig.timestamp}`;
+        if (!recentAlerts.has(alertKey)) {
+          recentAlerts.add(alertKey);
+          window._recentAlerts = recentAlerts;
+          // Clear old after 5 min
+          setTimeout(() => recentAlerts.delete(alertKey), 300000);
+          
+          showToast(`Strong ${sig.direction} Signal`, `${sig.name}: ${sig.reason}`, sig.direction === 'BUY' ? 'success' : 'error');
+        }
+      }
+    }
+    
+    // Re-render analysis signals panel without redrawing whole chart
+    renderAnalysis(data);
+  } catch (e) {
+    console.error('Signal polling failed', e);
+  }
 }
 
 // ─── MULTI-TIMEFRAME ───

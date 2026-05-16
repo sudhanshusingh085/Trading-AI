@@ -8,9 +8,9 @@ import numpy as np
 from typing import Optional
 from datetime import datetime
 from backend.signals.pattern_detector import detect_classical_patterns
+from backend.ml.predictor import predictor
 
-
-def detect_signals(candles: list[dict], indicators: dict) -> list[dict]:
+def detect_signals(candles: list[dict], indicators: dict, interval: str = "1h") -> list[dict]:
     """
     Analyze candle data + indicators to detect BUY/SELL signals.
     Returns list of signal dicts sorted by strength (strongest first).
@@ -157,6 +157,25 @@ def detect_signals(candles: list[dict], indicators: dict) -> list[dict]:
     for s in signals:
         s["buy_confluence"] = buy_confluence
         s["sell_confluence"] = sell_confluence
+
+    # ─── ML PREDICTION ───
+    ml_result = predictor.predict(indicators, latest, interval)
+    if ml_result.get("status") == "ok":
+        up = ml_result["up_prob"]
+        down = ml_result["down_prob"]
+        
+        # Add to global stats for the frontend (we'll attach to the first signal or as a separate thing)
+        if signals:
+            signals[0]["ml_prob"] = {"up": up, "down": down}
+            
+        if up > 70:
+            signals.append(_sig("AI ML Prediction", "BUY", 5,
+                f"Machine Learning model predicts {up}% probability of upward move", ts, price))
+            buy_confluence += 5
+        elif down > 70:
+            signals.append(_sig("AI ML Prediction", "SELL", 5,
+                f"Machine Learning model predicts {down}% probability of downward move", ts, price))
+            sell_confluence += 5
 
     signals.sort(key=lambda x: x["strength"], reverse=True)
     return signals

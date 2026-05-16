@@ -66,7 +66,7 @@ async def stock_analysis(
         return data or {"error": "No data"}
 
     indicators = compute_all_indicators(data["candles"])
-    signals = detect_signals(data["candles"], indicators)
+    signals = detect_signals(data["candles"], indicators, interval)
 
     return {
         **data,
@@ -113,7 +113,7 @@ async def crypto_analysis(
         return data or {"error": "No data"}
 
     indicators = compute_all_indicators(data["candles"])
-    signals = detect_signals(data["candles"], indicators)
+    signals = detect_signals(data["candles"], indicators, interval)
 
     return {
         **data,
@@ -137,7 +137,7 @@ async def crypto_multi_timeframe(
             data = get_crypto_history(symbol, interval=tf, limit=limit)
             if data and "error" not in data and len(data.get("candles", [])) >= 30:
                 indicators = compute_all_indicators(data["candles"])
-                signals = detect_signals(data["candles"], indicators)
+                signals = detect_signals(data["candles"], indicators, tf)
                 buy_str = sum(s["strength"] for s in signals if s["direction"] == "BUY")
                 sell_str = sum(s["strength"] for s in signals if s["direction"] == "SELL")
                 results[tf] = {
