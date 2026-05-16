@@ -16,6 +16,7 @@ from backend.data.crypto_fetcher import (
 )
 from backend.indicators.calculator import compute_all_indicators, get_available_indicators
 from backend.signals.detector import detect_signals
+from backend.signals.probability_engine import compute_probability
 from backend.signals.scanner import scanner
 from backend.backtest.engine import run_backtest
 from backend.backtest.strategies import STRATEGIES
