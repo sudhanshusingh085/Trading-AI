@@ -131,16 +131,36 @@
             </div>
           </div>
           
+          <!-- AI Prediction Panel -->
+          <div class="ai-prediction-card hidden" id="ai-prediction-card">
+            <div class="ai-header">
+              <span class="ai-title">🧠 AI ML Prediction</span>
+            </div>
+            <div class="ai-bar-container">
+              <div class="ai-bar-up" id="ai-bar-up" style="width: 50%;"></div>
+              <div class="ai-bar-down" id="ai-bar-down" style="width: 50%;"></div>
+            </div>
+            <div class="ai-labels">
+              <span class="ai-label-up" id="ai-label-up">50% UP</span>
+              <span class="ai-label-down" id="ai-label-down">50% DOWN</span>
+            </div>
+          </div>
+          
           <!-- Active Trade Panel -->
           <div id="active-trade-panel" class="active-trade-panel hidden">
             <div class="at-header">
               <span class="at-title">Active Trade</span>
               <span id="at-type" class="at-badge">BUY</span>
             </div>
+            <div class="at-context" id="at-context">
+              <span class="at-context-label">Expected Holding Time:</span> <span id="at-holding-time">—</span>
+            </div>
             <div class="at-grid">
               <div class="at-item"><span class="at-label">Entry</span><span id="at-entry" class="at-val">—</span></div>
               <div class="at-item"><span class="at-label">Current</span><span id="at-curr" class="at-val">—</span></div>
-              <div class="at-item"><span class="at-label">PnL</span><span id="at-pnl" class="at-val">—</span></div>
+              <div class="at-item"><span class="at-label">Target (TP)</span><span id="at-target" class="at-val" style="color:var(--green)">—</span></div>
+              <div class="at-item"><span class="at-label">Stop (SL)</span><span id="at-stop" class="at-val" style="color:var(--red)">—</span></div>
+              <div class="at-item" style="grid-column: span 2; text-align: center;"><span class="at-label">PnL</span><span id="at-pnl" class="at-val">—</span></div>
             </div>
             <button id="close-trade-btn" class="btn-primary btn-full btn-danger">Close Position</button>
           </div>
