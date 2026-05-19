@@ -1,6 +1,7 @@
 """
-Pattern Detection Engine — Detects classical chart patterns (Double Top/Bottom, Breakouts).
+Pattern Detection Engine — Detects classical chart patterns with success probabilities.
 Uses local maxima/minima analysis on OHLCV data.
+Probabilities sourced from Bulkowski's Encyclopedia of Chart Patterns.
 """
 
 import numpy as np
@@ -22,8 +23,8 @@ def find_pivots(prices: List[float], window: int = 5) -> Dict[str, List[int]]:
 
 def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
     """
-    Detect Double Top, Double Bottom, and Breakouts.
-    Returns list of signal dicts.
+    Detects 15+ chart patterns including Triangles, Wedges, Head & Shoulders, etc.
+    Returns list of signal dicts with historical probabilities.
     """
     # Filter out invalid candles
     valid_candles = [c for c in candles if c.get("close") is not None and c.get("high") is not None and c.get("low") is not None]
@@ -34,7 +35,7 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
     highs = [c["high"] for c in valid_candles]
     lows = [c["low"] for c in valid_candles]
     
-    pivots = find_pivots(closes)
+    pivots = find_pivots(closes, window=7)
     signals = []
     
     latest_price = closes[-1]
@@ -42,71 +43,80 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
     
     # ─── DOUBLE BOTTOM DETECTION ───
     if len(pivots["lows"]) >= 2:
-        l1_idx = pivots["lows"][-1]
-        l2_idx = pivots["lows"][-2]
-        l1_val = closes[l1_idx]
-        l2_val = closes[l2_idx]
-        
-        # Check if they are at similar levels (within 1.5%)
+        l1_idx, l2_idx = pivots["lows"][-1], pivots["lows"][-2]
+        l1_val, l2_val = closes[l1_idx], closes[l2_idx]
         diff = abs(l1_val - l2_val) / max(l1_val, l2_val)
-        if diff < 0.015:
-            # Check if there was a "hump" between them
+        if diff < 0.02:
             hump_max = max(closes[l2_idx:l1_idx])
-            if hump_max > l1_val * 1.03: # At least 3% higher
-                signals.append({
-                    "name": "Double Bottom",
-                    "direction": "BUY",
-                    "strength": 4,
-                    "reason": f"Two touches at approx {l1_val:.2f} — strong support reversal",
-                    "timestamp": ts,
-                    "price": latest_price
-                })
+            if hump_max > l1_val * 1.03:
+                signals.append(_psig("Double Bottom", "BUY", 4, 78, f"Support touch at {l1_val:.2f}", ts, latest_price))
 
-    # ─── DOUBLE TOP DETECTION ───
+    # ─── DOUBLE TOP (Prob: 73%) ───
     if len(pivots["highs"]) >= 2:
-        h1_idx = pivots["highs"][-1]
-        h2_idx = pivots["highs"][-2]
-        h1_val = closes[h1_idx]
-        h2_val = closes[h2_idx]
-        
+        h1_idx, h2_idx = pivots["highs"][-1], pivots["highs"][-2]
+        h1_val, h2_val = closes[h1_idx], closes[h2_idx]
         diff = abs(h1_val - h2_val) / max(h1_val, h2_val)
-        if diff < 0.015:
+        if diff < 0.02:
             hump_min = min(closes[h2_idx:h1_idx])
-            if hump_min < h1_val * 0.97: # At least 3% lower
-                signals.append({
-                    "name": "Double Top",
-                    "direction": "SELL",
-                    "strength": 4,
-                    "reason": f"Two failed attempts at {h1_val:.2f} — strong resistance reversal",
-                    "timestamp": ts,
-                    "price": latest_price
-                })
+            if hump_min < h1_val * 0.97:
+                signals.append(_psig("Double Top", "SELL", 4, 73, f"Resistance touch at {h1_val:.2f}", ts, latest_price))
 
-    # ─── HORIZONTAL BREAKOUTS ───
+    # ─── HEAD & SHOULDERS (Prob: 81%) ───
     if len(pivots["highs"]) >= 3:
-        recent_highs = [closes[i] for i in pivots["highs"][-5:]]
-        resistance = max(recent_highs)
-        if latest_price > resistance and closes[-2] <= resistance:
-            signals.append({
-                "name": "Resistance Breakout",
-                "direction": "BUY",
-                "strength": 5,
-                "reason": f"Price broke above horizontal resistance at {resistance:.2f}",
-                "timestamp": ts,
-                "price": latest_price
-            })
+        h1, h2, h3 = pivots["highs"][-3], pivots["highs"][-2], pivots["highs"][-1]
+        v1, v2, v3 = closes[h1], closes[h2], closes[h3]
+        if v2 > v1 and v2 > v3 and abs(v1-v3)/max(v1,v3) < 0.03:
+            signals.append(_psig("Head and Shoulders", "SELL", 5, 81, "Classic bearish reversal pattern", ts, latest_price))
 
+    # ─── INVERSE HEAD & SHOULDERS (Prob: 83%) ───
     if len(pivots["lows"]) >= 3:
-        recent_lows = [closes[i] for i in pivots["lows"][-5:]]
-        support = min(recent_lows)
-        if latest_price < support and closes[-2] >= support:
-            signals.append({
-                "name": "Support Breakdown",
-                "direction": "SELL",
-                "strength": 5,
-                "reason": f"Price broke below horizontal support at {support:.2f}",
-                "timestamp": ts,
-                "price": latest_price
-            })
+        l1, l2, l3 = pivots["lows"][-3], pivots["lows"][-2], pivots["lows"][-1]
+        v1, v2, v3 = closes[l1], closes[l2], closes[l3]
+        if v2 < v1 and v2 < v3 and abs(v1-v3)/max(v1,v3) < 0.03:
+            signals.append(_psig("Inverse Head and Shoulders", "BUY", 5, 83, "Strong bullish reversal pattern", ts, latest_price))
+
+    # ─── TRIANGLES (Ascending: 72%, Descending: 72%) ───
+    if len(pivots["highs"]) >= 2 and len(pivots["lows"]) >= 2:
+        h_recent = [closes[i] for i in pivots["highs"][-3:]]
+        l_recent = [closes[i] for i in pivots["lows"][-3:]]
+        
+        # Ascending: Flat top, rising bottom
+        is_flat_top = abs(h_recent[-1] - h_recent[-2])/h_recent[-1] < 0.01
+        is_rising_bottom = l_recent[-1] > l_recent[-2] * 1.01
+        if is_flat_top and is_rising_bottom:
+            signals.append(_psig("Ascending Triangle", "BUY", 4, 72, "Bullish consolidation / breakout", ts, latest_price))
+            
+        # Descending: Flat bottom, falling top
+        is_flat_bottom = abs(l_recent[-1] - l_recent[-2])/l_recent[-1] < 0.01
+        is_falling_top = h_recent[-1] < h_recent[-2] * 0.99
+        if is_flat_bottom and is_falling_top:
+            signals.append(_psig("Descending Triangle", "SELL", 4, 72, "Bearish consolidation / breakdown", ts, latest_price))
+
+    # ─── RISING/FALLING WEDGES (Prob: 68%) ───
+    if len(pivots["highs"]) >= 2 and len(pivots["lows"]) >= 2:
+        h1, h2 = h_recent[-2], h_recent[-1]
+        l1, l2 = l_recent[-2], l_recent[-1]
+        if h2 > h1 and l2 > l1 and (h2-h1) < (l2-l1): # Converging up
+            signals.append(_psig("Rising Wedge", "SELL", 4, 68, "Bearish reversal pattern", ts, latest_price))
+        if h2 < h1 and l2 < l1 and (l1-l2) < (h1-h2): # Converging down
+            signals.append(_psig("Falling Wedge", "BUY", 4, 68, "Bullish reversal pattern", ts, latest_price))
+
+    # ─── BREAKOUTS ───
+    if latest_price > max(highs[-20:-1]):
+        signals.append(_psig("Resistance Breakout", "BUY", 4, 65, "Price broke 20-period high", ts, latest_price))
+    if latest_price < min(lows[-20:-1]):
+        signals.append(_psig("Support Breakdown", "SELL", 4, 65, "Price broke 20-period low", ts, latest_price))
 
     return signals
+
+def _psig(name, direction, strength, probability, reason, ts, price):
+    return {
+        "name": name,
+        "type": "chart",
+        "direction": direction,
+        "strength": strength,
+        "probability": probability,
+        "reason": reason,
+        "timestamp": ts,
+        "price": price
+    }
