@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, precision_score, make_scorer, fbeta_score
 
 def train_model(interval="1h"):
     dataset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dataset_{interval}.csv")
@@ -22,19 +22,52 @@ def train_model(interval="1h"):
     X = df.drop(columns=['target'])
     
     print(f"[*] Features: {list(X.columns)}")
+    print(f"[*] Total dataset size: {X.shape[0]} rows, {X.shape[1]} features")
     print(f"[*] Class distribution: \n{y.value_counts(normalize=True)}")
 
-    # Split into Train and Test
-    # For time series, it's better not to shuffle, but for this demo, standard split is okay.
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
+    # TimeSeriesSplit prevents sequential leakage
+    tscv = TimeSeriesSplit(n_splits=5)
+    
+    # Define hyperparameter grid for tuning
+    param_grid = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [6, 8, 10],
+        'min_samples_leaf': [3, 5, 10],
+        'max_features': ['sqrt', 0.5]
+    }
+    
+    # Define custom F0.5 scorer (weights Precision twice as high as Recall to eliminate false positives)
+    f05_scorer = make_scorer(fbeta_score, beta=0.5)
+    
+    print("[*] Performing Time-Series Cross-Validation Grid Search...")
+    base_model = RandomForestClassifier(class_weight='balanced', random_state=42, n_jobs=-1)
+    
+    grid_search = GridSearchCV(
+        estimator=base_model,
+        param_grid=param_grid,
+        cv=tscv,
+        scoring=f05_scorer,
+        verbose=1,
+        n_jobs=-1
+    )
+    
+    # Standard time series split for final evaluation
+    # Use the last 20% of chronological data as lockbox test set
+    split_idx = int(len(X) * 0.8)
+    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    
+    grid_search.fit(X_train, y_train)
+    
+    best_model = grid_search.best_estimator_
+    print(f"[+] Best Parameters: {grid_search.best_params_}")
+    print(f"[+] Best CV F0.5 Score: {grid_search.best_score_:.4f}")
 
-    print("[*] Training Random Forest Classifier...")
-    model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, n_jobs=-1)
-    model.fit(X_train, y_train)
-
-    print("[*] Evaluating Model...")
-    y_pred = model.predict(X_test)
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    print("[*] Evaluating Best Model on Lockbox Out-of-Sample (OOS) Test Set...")
+    y_pred = best_model.predict(X_test)
+    
+    print(f"OOS Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    print(f"OOS Precision (Profitable Trades): {precision_score(y_test, y_pred):.2f}")
     print("Classification Report:")
     print(classification_report(y_test, y_pred))
 
@@ -44,8 +77,8 @@ def train_model(interval="1h"):
     model_path = os.path.join(models_dir, f"rf_model_{interval}.joblib")
     
     # Save the feature names as well so predictor knows what to feed in
-    joblib.dump({"model": model, "features": list(X.columns)}, model_path)
-    print(f"[+] Model saved successfully to {model_path}")
+    joblib.dump({"model": best_model, "features": list(X.columns)}, model_path)
+    print(f"[+] Highly-optimized Model saved successfully to {model_path}")
 
 if __name__ == "__main__":
     import sys

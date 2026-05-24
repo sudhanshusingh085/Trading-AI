@@ -1,0 +1,780 @@
+{
+  "symbol": "BTCUSDT",
+  "interval": "1h",
+  "period": "2026-05-04 04:30:00 to 2026-05-24 23:30:00",
+  "ml_engine": {
+    "accuracy": 63.5,
+    "trades": [
+      {
+        "entry": 81016.96,
+        "exit": 81113.34,
+        "pnl": 1.19,
+        "pnl_pct": 0.12,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-07 05:30:00",
+        "exit_time": "2026-05-07 07:30:00"
+      },
+      {
+        "entry": 80834.91,
+        "exit": 81518.58,
+        "pnl": 9.29,
+        "pnl_pct": 0.85,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-07 08:30:00",
+        "exit_time": "2026-05-07 12:30:00"
+      },
+      {
+        "entry": 81231.24,
+        "exit": 80503.68,
+        "pnl": -10.86,
+        "pnl_pct": -0.9,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-07 13:30:00",
+        "exit_time": "2026-05-07 18:30:00"
+      },
+      {
+        "entry": 79682.4,
+        "exit": 80212.56,
+        "pnl": 8.84,
+        "pnl_pct": 0.67,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-08 12:30:00",
+        "exit_time": "2026-05-08 15:30:00"
+      },
+      {
+        "entry": 80025.82,
+        "exit": 80150.97,
+        "pnl": 2.29,
+        "pnl_pct": 0.16,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-08 17:30:00",
+        "exit_time": "2026-05-08 19:30:00"
+      },
+      {
+        "entry": 79802.34,
+        "exit": 80133.09,
+        "pnl": 6.67,
+        "pnl_pct": 0.41,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-08 21:30:00",
+        "exit_time": "2026-05-09 01:30:00"
+      },
+      {
+        "entry": 80417.87,
+        "exit": 80812.7,
+        "pnl": 8.69,
+        "pnl_pct": 0.49,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-09 07:30:00",
+        "exit_time": "2026-05-09 22:30:00"
+      },
+      {
+        "entry": 80678.4,
+        "exit": 81418.01,
+        "pnl": 17.86,
+        "pnl_pct": 0.92,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-10 04:30:00",
+        "exit_time": "2026-05-10 20:30:00"
+      },
+      {
+        "entry": 80734.88,
+        "exit": 82044.49,
+        "pnl": 34.8,
+        "pnl_pct": 1.62,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 01:30:00",
+        "exit_time": "2026-05-11 03:30:00"
+      },
+      {
+        "entry": 80832.33,
+        "exit": 81575.85,
+        "pnl": 21.74,
+        "pnl_pct": 0.92,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 10:30:00",
+        "exit_time": "2026-05-11 21:30:00"
+      },
+      {
+        "entry": 81240.01,
+        "exit": 80843.31,
+        "pnl": -12.73,
+        "pnl_pct": -0.49,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-12 09:30:00",
+        "exit_time": "2026-05-12 13:30:00"
+      },
+      {
+        "entry": 80527.69,
+        "exit": 80834.64,
+        "pnl": 10.9,
+        "pnl_pct": 0.38,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-12 22:30:00",
+        "exit_time": "2026-05-13 00:30:00"
+      },
+      {
+        "entry": 80696.87,
+        "exit": 81006.0,
+        "pnl": 12.05,
+        "pnl_pct": 0.38,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-13 01:30:00",
+        "exit_time": "2026-05-13 06:30:00"
+      },
+      {
+        "entry": 80980.05,
+        "exit": 81291.38,
+        "pnl": 13.31,
+        "pnl_pct": 0.38,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-13 11:30:00",
+        "exit_time": "2026-05-13 14:30:00"
+      },
+      {
+        "entry": 78827.21,
+        "exit": 79514.97,
+        "pnl": 33.24,
+        "pnl_pct": 0.87,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-13 20:30:00",
+        "exit_time": "2026-05-13 22:30:00"
+      },
+      {
+        "entry": 79451.63,
+        "exit": 79809.16,
+        "pnl": 18.87,
+        "pnl_pct": 0.45,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-14 09:30:00",
+        "exit_time": "2026-05-14 10:30:00"
+      },
+      {
+        "entry": 79745.98,
+        "exit": 81888.4,
+        "pnl": 123.96,
+        "pnl_pct": 2.69,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-14 12:30:00",
+        "exit_time": "2026-05-14 21:30:00"
+      },
+      {
+        "entry": 78758.59,
+        "exit": 79150.37,
+        "pnl": 25.31,
+        "pnl_pct": 0.5,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-15 18:30:00",
+        "exit_time": "2026-05-15 19:30:00"
+      },
+      {
+        "entry": 77725.71,
+        "exit": 78465.99,
+        "pnl": 53.32,
+        "pnl_pct": 0.95,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-17 06:30:00",
+        "exit_time": "2026-05-17 15:30:00"
+      },
+      {
+        "entry": 78051.51,
+        "exit": 78415.3,
+        "pnl": 28.72,
+        "pnl_pct": 0.47,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-17 19:30:00",
+        "exit_time": "2026-05-18 00:30:00"
+      },
+      {
+        "entry": 76835.41,
+        "exit": 77038.49,
+        "pnl": 17.92,
+        "pnl_pct": 0.26,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-18 07:30:00",
+        "exit_time": "2026-05-18 09:30:00"
+      },
+      {
+        "entry": 76252.5,
+        "exit": 76928.0,
+        "pnl": 66.09,
+        "pnl_pct": 0.89,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-18 23:30:00",
+        "exit_time": "2026-05-19 00:30:00"
+      },
+      {
+        "entry": 76392.43,
+        "exit": 76894.59,
+        "pnl": 53.98,
+        "pnl_pct": 0.66,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-19 19:30:00",
+        "exit_time": "2026-05-19 21:30:00"
+      },
+      {
+        "entry": 76856.76,
+        "exit": 77022.23,
+        "pnl": 19.46,
+        "pnl_pct": 0.22,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-19 22:30:00",
+        "exit_time": "2026-05-20 01:30:00"
+      },
+      {
+        "entry": 76712.21,
+        "exit": 77414.11,
+        "pnl": 90.97,
+        "pnl_pct": 0.91,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 03:30:00",
+        "exit_time": "2026-05-20 11:30:00"
+      },
+      {
+        "entry": 77282.64,
+        "exit": 77458.04,
+        "pnl": 24.84,
+        "pnl_pct": 0.23,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 12:30:00",
+        "exit_time": "2026-05-20 13:30:00"
+      },
+      {
+        "entry": 77204.61,
+        "exit": 77446.08,
+        "pnl": 37.66,
+        "pnl_pct": 0.31,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 18:30:00",
+        "exit_time": "2026-05-20 19:30:00"
+      },
+      {
+        "entry": 77338.6,
+        "exit": 77667.49,
+        "pnl": 56.34,
+        "pnl_pct": 0.43,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 21:30:00",
+        "exit_time": "2026-05-21 00:30:00"
+      },
+      {
+        "entry": 77500.01,
+        "exit": 77967.09,
+        "pnl": 87.85,
+        "pnl_pct": 0.6,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 02:30:00",
+        "exit_time": "2026-05-21 05:30:00"
+      },
+      {
+        "entry": 77622.14,
+        "exit": 77198.08,
+        "pnl": -87.81,
+        "pnl_pct": -0.55,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 11:30:00",
+        "exit_time": "2026-05-21 15:30:00"
+      },
+      {
+        "entry": 77122.68,
+        "exit": 77869.38,
+        "pnl": 170.75,
+        "pnl_pct": 0.97,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 18:30:00",
+        "exit_time": "2026-05-21 22:30:00"
+      },
+      {
+        "entry": 77655.42,
+        "exit": 76774.23,
+        "pnl": -220.74,
+        "pnl_pct": -1.13,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-22 09:30:00",
+        "exit_time": "2026-05-22 19:30:00"
+      },
+      {
+        "entry": 74609.36,
+        "exit": 77287.58,
+        "pnl": 765.74,
+        "pnl_pct": 3.59,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-23 12:30:00",
+        "exit_time": "2026-05-24 01:30:00"
+      },
+      {
+        "entry": 76465.16,
+        "exit": 76619.52,
+        "pnl": 47.57,
+        "pnl_pct": 0.2,
+        "reason": "END",
+        "entry_time": "2026-05-24 19:30:00",
+        "exit_time": "2026-05-24 23:30:00"
+      }
+    ],
+    "final_capital": 259216.27,
+    "pnl": 249216.27,
+    "return_pct": 2492.16
+  },
+  "verdict_engine": {
+    "accuracy": 54.0,
+    "trades": [
+      {
+        "entry": 81162.01,
+        "exit": 80503.68,
+        "pnl": -8.12,
+        "pnl_pct": -0.81,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-07 17:30:00",
+        "exit_time": "2026-05-07 18:30:00"
+      },
+      {
+        "entry": 80179.94,
+        "exit": 80193.17,
+        "pnl": 0.18,
+        "pnl_pct": 0.02,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-09 00:30:00",
+        "exit_time": "2026-05-09 04:30:00"
+      },
+      {
+        "entry": 80263.92,
+        "exit": 80397.97,
+        "pnl": 2.02,
+        "pnl_pct": 0.17,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-09 11:30:00",
+        "exit_time": "2026-05-09 17:30:00"
+      },
+      {
+        "entry": 80527.92,
+        "exit": 80625.01,
+        "pnl": 1.6,
+        "pnl_pct": 0.12,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-09 20:30:00",
+        "exit_time": "2026-05-09 21:30:00"
+      },
+      {
+        "entry": 80780.83,
+        "exit": 80678.4,
+        "pnl": -1.86,
+        "pnl_pct": -0.13,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-10 02:30:00",
+        "exit_time": "2026-05-10 04:30:00"
+      },
+      {
+        "entry": 80680.04,
+        "exit": 80777.42,
+        "pnl": 1.94,
+        "pnl_pct": 0.12,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-10 05:30:00",
+        "exit_time": "2026-05-10 07:30:00"
+      },
+      {
+        "entry": 80775.0,
+        "exit": 81418.01,
+        "pnl": 14.07,
+        "pnl_pct": 0.8,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-10 08:30:00",
+        "exit_time": "2026-05-10 20:30:00"
+      },
+      {
+        "entry": 81437.83,
+        "exit": 80734.88,
+        "pnl": -16.83,
+        "pnl_pct": -0.86,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 00:30:00",
+        "exit_time": "2026-05-11 01:30:00"
+      },
+      {
+        "entry": 80720.47,
+        "exit": 82210.07,
+        "pnl": 39.47,
+        "pnl_pct": 1.85,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 02:30:00",
+        "exit_time": "2026-05-11 04:30:00"
+      },
+      {
+        "entry": 81501.72,
+        "exit": 81169.08,
+        "pnl": -9.64,
+        "pnl_pct": -0.41,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 06:30:00",
+        "exit_time": "2026-05-11 07:30:00"
+      },
+      {
+        "entry": 81196.94,
+        "exit": 80953.38,
+        "pnl": -7.79,
+        "pnl_pct": -0.3,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 16:30:00",
+        "exit_time": "2026-05-11 19:30:00"
+      },
+      {
+        "entry": 81445.9,
+        "exit": 81941.09,
+        "pnl": 17.32,
+        "pnl_pct": 0.61,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-11 20:30:00",
+        "exit_time": "2026-05-11 22:30:00"
+      },
+      {
+        "entry": 79656.01,
+        "exit": 79756.01,
+        "pnl": 3.94,
+        "pnl_pct": 0.13,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-13 18:30:00",
+        "exit_time": "2026-05-13 19:30:00"
+      },
+      {
+        "entry": 79108.39,
+        "exit": 79514.97,
+        "pnl": 17.73,
+        "pnl_pct": 0.51,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-13 21:30:00",
+        "exit_time": "2026-05-13 22:30:00"
+      },
+      {
+        "entry": 79428.46,
+        "exit": 79370.24,
+        "pnl": -2.79,
+        "pnl_pct": -0.07,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-14 03:30:00",
+        "exit_time": "2026-05-14 07:30:00"
+      },
+      {
+        "entry": 79044.85,
+        "exit": 81888.4,
+        "pnl": 150.15,
+        "pnl_pct": 3.6,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-14 08:30:00",
+        "exit_time": "2026-05-14 21:30:00"
+      },
+      {
+        "entry": 81668.48,
+        "exit": 81089.99,
+        "pnl": -32.69,
+        "pnl_pct": -0.71,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-14 22:30:00",
+        "exit_time": "2026-05-15 04:30:00"
+      },
+      {
+        "entry": 78758.59,
+        "exit": 79150.37,
+        "pnl": 25.18,
+        "pnl_pct": 0.5,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-15 18:30:00",
+        "exit_time": "2026-05-15 19:30:00"
+      },
+      {
+        "entry": 79035.26,
+        "exit": 79027.37,
+        "pnl": -0.56,
+        "pnl_pct": -0.01,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-16 09:30:00",
+        "exit_time": "2026-05-16 10:30:00"
+      },
+      {
+        "entry": 78369.77,
+        "exit": 78201.5,
+        "pnl": -13.18,
+        "pnl_pct": -0.21,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-16 12:30:00",
+        "exit_time": "2026-05-16 22:30:00"
+      },
+      {
+        "entry": 78229.81,
+        "exit": 78259.66,
+        "pnl": 2.57,
+        "pnl_pct": 0.04,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-16 23:30:00",
+        "exit_time": "2026-05-17 00:30:00"
+      },
+      {
+        "entry": 77945.85,
+        "exit": 77895.51,
+        "pnl": -4.8,
+        "pnl_pct": -0.06,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-17 05:30:00",
+        "exit_time": "2026-05-17 07:30:00"
+      },
+      {
+        "entry": 78121.41,
+        "exit": 78465.99,
+        "pnl": 35.96,
+        "pnl_pct": 0.44,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-17 10:30:00",
+        "exit_time": "2026-05-17 15:30:00"
+      },
+      {
+        "entry": 78089.98,
+        "exit": 78415.3,
+        "pnl": 37.37,
+        "pnl_pct": 0.42,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-17 22:30:00",
+        "exit_time": "2026-05-18 00:30:00"
+      },
+      {
+        "entry": 78277.36,
+        "exit": 77997.24,
+        "pnl": -35.39,
+        "pnl_pct": -0.36,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-18 01:30:00",
+        "exit_time": "2026-05-18 03:30:00"
+      },
+      {
+        "entry": 77209.95,
+        "exit": 76924.65,
+        "pnl": -40.18,
+        "pnl_pct": -0.37,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-18 05:30:00",
+        "exit_time": "2026-05-18 08:30:00"
+      },
+      {
+        "entry": 76764.74,
+        "exit": 77285.83,
+        "pnl": 81.0,
+        "pnl_pct": 0.68,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-18 15:30:00",
+        "exit_time": "2026-05-18 16:30:00"
+      },
+      {
+        "entry": 76928.0,
+        "exit": 77001.87,
+        "pnl": 12.61,
+        "pnl_pct": 0.1,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-19 00:30:00",
+        "exit_time": "2026-05-19 04:30:00"
+      },
+      {
+        "entry": 76787.11,
+        "exit": 76712.21,
+        "pnl": -14.12,
+        "pnl_pct": -0.1,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-19 08:30:00",
+        "exit_time": "2026-05-20 03:30:00"
+      },
+      {
+        "entry": 76780.37,
+        "exit": 77414.11,
+        "pnl": 131.13,
+        "pnl_pct": 0.83,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 09:30:00",
+        "exit_time": "2026-05-20 11:30:00"
+      },
+      {
+        "entry": 77485.13,
+        "exit": 77500.01,
+        "pnl": 3.36,
+        "pnl_pct": 0.02,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-20 14:30:00",
+        "exit_time": "2026-05-21 02:30:00"
+      },
+      {
+        "entry": 77967.09,
+        "exit": 78078.72,
+        "pnl": 27.54,
+        "pnl_pct": 0.14,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 05:30:00",
+        "exit_time": "2026-05-21 08:30:00"
+      },
+      {
+        "entry": 77889.01,
+        "exit": 77633.02,
+        "pnl": -69.68,
+        "pnl_pct": -0.33,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 12:30:00",
+        "exit_time": "2026-05-21 14:30:00"
+      },
+      {
+        "entry": 77278.53,
+        "exit": 77373.57,
+        "pnl": 28.61,
+        "pnl_pct": 0.12,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-21 17:30:00",
+        "exit_time": "2026-05-22 05:30:00"
+      },
+      {
+        "entry": 77267.38,
+        "exit": 75539.5,
+        "pnl": -573.46,
+        "pnl_pct": -2.24,
+        "reason": "STOP_LOSS",
+        "entry_time": "2026-05-22 13:30:00",
+        "exit_time": "2026-05-23 04:30:00"
+      },
+      {
+        "entry": 75352.64,
+        "exit": 77287.58,
+        "pnl": 721.36,
+        "pnl_pct": 2.57,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-23 05:30:00",
+        "exit_time": "2026-05-24 01:30:00"
+      },
+      {
+        "entry": 77020.53,
+        "exit": 77190.74,
+        "pnl": 68.44,
+        "pnl_pct": 0.22,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-24 14:30:00",
+        "exit_time": "2026-05-24 15:30:00"
+      },
+      {
+        "entry": 76671.7,
+        "exit": 76693.34,
+        "pnl": 9.62,
+        "pnl_pct": 0.03,
+        "reason": "SIGNAL",
+        "entry_time": "2026-05-24 21:30:00",
+        "exit_time": "2026-05-24 22:30:00"
+      }
+    ],
+    "final_capital": 375133.58,
+    "pnl": 365133.58,
+    "return_pct": 3651.34
+  },
+  "buy_and_hold_return_pct": -7.15,
+  "pattern_stats": {
+    "Three White Soldiers (Exhaustion)": {
+      "total": 35,
+      "correct": 28,
+      "type": "candlestick",
+      "accuracy": 80.0
+    },
+    "Resistance Breakout": {
+      "total": 13,
+      "correct": 5,
+      "type": "chart",
+      "accuracy": 38.5
+    },
+    "Rising Wedge": {
+      "total": 62,
+      "correct": 28,
+      "type": "chart",
+      "accuracy": 45.2
+    },
+    "Three Black Crows (Oversold Bounce)": {
+      "total": 36,
+      "correct": 23,
+      "type": "candlestick",
+      "accuracy": 63.9
+    },
+    "Doji": {
+      "total": 58,
+      "correct": 0,
+      "type": "candlestick",
+      "accuracy": 0.0
+    },
+    "Bullish Engulfing": {
+      "total": 34,
+      "correct": 18,
+      "type": "candlestick",
+      "accuracy": 52.9
+    },
+    "Bearish Engulfing": {
+      "total": 39,
+      "correct": 20,
+      "type": "candlestick",
+      "accuracy": 51.3
+    },
+    "Hammer": {
+      "total": 17,
+      "correct": 10,
+      "type": "candlestick",
+      "accuracy": 58.8
+    },
+    "Evening Star": {
+      "total": 16,
+      "correct": 9,
+      "type": "candlestick",
+      "accuracy": 56.2
+    },
+    "Morning Star": {
+      "total": 11,
+      "correct": 7,
+      "type": "candlestick",
+      "accuracy": 63.6
+    },
+    "Support Breakdown": {
+      "total": 21,
+      "correct": 8,
+      "type": "chart",
+      "accuracy": 38.1
+    },
+    "Head and Shoulders": {
+      "total": 93,
+      "correct": 49,
+      "type": "chart",
+      "accuracy": 52.7
+    },
+    "Descending Triangle": {
+      "total": 28,
+      "correct": 17,
+      "type": "chart",
+      "accuracy": 60.7
+    },
+    "Hanging Man": {
+      "total": 7,
+      "correct": 2,
+      "type": "candlestick",
+      "accuracy": 28.6
+    },
+    "Inverse Head and Shoulders": {
+      "total": 113,
+      "correct": 60,
+      "type": "chart",
+      "accuracy": 53.1
+    },
+    "Double Bottom": {
+      "total": 12,
+      "correct": 5,
+      "type": "chart",
+      "accuracy": 41.7
+    },
+    "Double Top": {
+      "total": 68,
+      "correct": 36,
+      "type": "chart",
+      "accuracy": 52.9
+    },
+    "Ascending Triangle": {
+      "total": 8,
+      "correct": 3,
+      "type": "chart",
+      "accuracy": 37.5
+    }
+  }
+}

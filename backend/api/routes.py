@@ -244,8 +244,8 @@ def _verdict(signals):
         return "NEUTRAL"
     buy = sum(s["strength"] for s in signals if s["direction"] == "BUY")
     sell = sum(s["strength"] for s in signals if s["direction"] == "SELL")
-    if buy > sell + 3: return "STRONG BUY"
-    if buy > sell: return "BUY"
-    if sell > buy + 3: return "STRONG SELL"
-    if sell > buy: return "SELL"
+    if buy > sell + 5: return "STRONG BUY"
+    if buy > sell + 2: return "BUY"
+    if sell > buy + 5: return "STRONG SELL"
+    if sell > buy + 2: return "SELL"
     return "NEUTRAL"

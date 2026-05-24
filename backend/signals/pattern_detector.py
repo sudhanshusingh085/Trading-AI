@@ -98,8 +98,7 @@ def detect_classical_patterns(candles: List[Dict]) -> List[Dict]:
         l1, l2 = l_recent[-2], l_recent[-1]
         if h2 > h1 and l2 > l1 and (h2-h1) < (l2-l1): # Converging up
             signals.append(_psig("Rising Wedge", "SELL", 4, 68, "Bearish reversal pattern", ts, latest_price))
-        if h2 < h1 and l2 < l1 and (l1-l2) < (h1-h2): # Converging down
-            signals.append(_psig("Falling Wedge", "BUY", 4, 68, "Bullish reversal pattern", ts, latest_price))
+        # Falling Wedge removed — backtest showed only 41.3% accuracy (harmful)
 
     # ─── BREAKOUTS ───
     if latest_price > max(highs[-20:-1]):

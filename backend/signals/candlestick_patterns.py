@@ -110,31 +110,31 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── THREE WHITE SOLDIERS (Prob: 82%) ───
+    # ─── THREE WHITE SOLDIERS (Inverted — backtest showed 79% bearish follow-through) ───
     if is_bull(c1) and is_bull(c2) and is_bull(c3) and \
        c1["close"] > c2["close"] > c3["close"] and \
        body_size(c1) > 0.5 * body_size(c2):
         signals.append({
-            "name": "Three White Soldiers",
+            "name": "Three White Soldiers (Exhaustion)",
             "type": "candlestick",
-            "direction": "BUY",
-            "strength": 5,
-            "probability": 82,
-            "reason": "Three strong consecutive bullish candles indicating strong uptrend",
+            "direction": "SELL",
+            "strength": 3,
+            "probability": 79,
+            "reason": "Three consecutive bullish candles — historically signals exhaustion and pullback",
             "timestamp": ts, "price": price
         })
 
-    # ─── THREE BLACK CROWS (Prob: 78%) ───
+    # ─── THREE BLACK CROWS (Inverted — backtest showed 66% bullish follow-through) ───
     if is_bear(c1) and is_bear(c2) and is_bear(c3) and \
        c1["close"] < c2["close"] < c3["close"] and \
        body_size(c1) > 0.5 * body_size(c2):
         signals.append({
-            "name": "Three Black Crows",
+            "name": "Three Black Crows (Oversold Bounce)",
             "type": "candlestick",
-            "direction": "SELL",
-            "strength": 5,
-            "probability": 78,
-            "reason": "Three strong consecutive bearish candles indicating strong downtrend",
+            "direction": "BUY",
+            "strength": 3,
+            "probability": 66,
+            "reason": "Three consecutive bearish candles — historically signals oversold bounce",
             "timestamp": ts, "price": price
         })
 
