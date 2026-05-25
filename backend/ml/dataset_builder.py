@@ -1,35 +1,30 @@
 import pandas as pd
 import numpy as np
-import yfinance as yf
 import os
 
 # Import pure pandas indicator helpers from the existing backend calculator
 from backend.indicators.calculator import _ema, _rsi, _true_range, _adx
+from backend.data.crypto_fetcher import get_historical_data_sync
 
-def fetch_and_build_dataset(symbol="BTC-USD", period="1y", interval="1h", lookforward=5, target_pct=1.0):
+def fetch_and_build_dataset(symbol="BTCUSDT", interval="1h", lookforward=15, target_pct=1.0):
     """
-    Fetches historical data, computes features, and creates the target label.
+    Fetches historical data from Binance, computes scale-invariant relative features,
+    adds trend trajectories (velocity, acceleration, lags), and uses dynamic Triple Barrier labeling.
     """
-    print(f"[*] Fetching {symbol} data for the last {period} at {interval} interval...")
-    df = yf.download(symbol, period=period, interval=interval, progress=False)
+    print(f"[*] Fetching {symbol} data at {interval} interval from Binance...")
+    data = get_historical_data_sync(symbol, interval=interval, limit=1000)
     
-    if df.empty:
-        print("[-] Failed to fetch data.")
+    if not data or "candles" not in data:
+        print(f"[-] Failed to fetch data: {data.get('error') if data else 'Unknown error'}")
         return None
         
-    # Flatten MultiIndex columns if yfinance returns them
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [c[0] for c in df.columns]
-
+    df = pd.DataFrame(data["candles"])
     print(f"[*] Raw data shape: {df.shape}")
 
-    # Ensure required columns exist and are numeric
-    for col in ["Open", "High", "Low", "Close", "Volume"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-    
-    # Drop NaNs early
-    df.dropna(inplace=True)
+    # Ensure correct capitalization of column names for the ML pipeline
+    df.rename(columns={
+        "open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"
+    }, inplace=True)
 
     # Compute Features (Pure Pandas)
     close = df["Close"]
@@ -37,81 +32,122 @@ def fetch_and_build_dataset(symbol="BTC-USD", period="1y", interval="1h", lookfo
     low = df["Low"]
     volume = df["Volume"]
 
+    # 1. Standard Oscillators
     df['RSI_14'] = _rsi(close, 14)
     
     ema_12 = _ema(close, 12)
     ema_26 = _ema(close, 26)
-    df['MACD_12_26_9'] = ema_12 - ema_26
-    df['MACDs_12_26_9'] = _ema(df['MACD_12_26_9'], 9)
-    df['MACDh_12_26_9'] = df['MACD_12_26_9'] - df['MACDs_12_26_9']
+    macd_line = ema_12 - ema_26
+    macd_signal = _ema(macd_line, 9)
+    macd_hist = macd_line - macd_signal
+    df['MACDh_ratio'] = macd_hist / close * 100
     
-    df['EMA_9'] = _ema(close, 9)
-    df['EMA_21'] = _ema(close, 21)
-    df['EMA_50'] = _ema(close, 50)
+    # 2. Relative EMA Differences (Scale-Invariant)
+    df['EMA9_ratio'] = (close - _ema(close, 9)) / _ema(close, 9) * 100
+    df['EMA21_ratio'] = (close - _ema(close, 21)) / _ema(close, 21) * 100
+    df['EMA50_ratio'] = (close - _ema(close, 50)) / _ema(close, 50) * 100
     
+    # 3. Bollinger Bands Features
     sma_20 = close.rolling(20).mean()
     std_20 = close.rolling(20).std()
-    df['BBM_20_2.0'] = sma_20
-    df['BBU_20_2.0'] = sma_20 + 2 * std_20
-    df['BBL_20_2.0'] = sma_20 - 2 * std_20
-    df['BBB_20_2.0'] = (df['BBU_20_2.0'] - df['BBL_20_2.0']) / sma_20 * 100
-    df['BBP_20_2.0'] = (close - df['BBL_20_2.0']) / (df['BBU_20_2.0'] - df['BBL_20_2.0'])
+    bbu = sma_20 + 2 * std_20
+    bbl = sma_20 - 2 * std_20
+    df['BBB_20_2.0'] = (bbu - bbl) / sma_20 * 100
+    df['BBP_20_2.0'] = (close - bbl) / (bbu - bbl)
     
+    # 4. Relative Volatility Features
     tr = _true_range(high, low, close)
-    df['ATRr_14'] = tr.rolling(14).mean()
-    
-    # Simple approximations for ADX/DMP/DMN if missing
+    df['ATRr_ratio'] = tr.rolling(14).mean() / close * 100
     df['ADX_14'] = _adx(high, low, close, 14)
-    df['DMP_14'] = 0.0 # Skipping full computation for dataset brevity
-    df['DMN_14'] = 0.0 
     
-    # Custom Features
-    df['returns'] = close.pct_change()
-    df['vol_sma'] = volume.rolling(20).mean()
-    df['vol_ratio'] = volume / df['vol_sma']
+    # 5. Vol and Returns Features
+    df['returns'] = (close - df['Open']) / df['Open'] * 100
+    df['spread_pct'] = (high - low) / close * 100
     
-    # Drop rows with NaN from indicator warm-up
+    vol_sma = volume.rolling(20).mean()
+    df['vol_ratio'] = volume / vol_sma
+
+    # ─── ADD MOMENTUM TRAJECTORY VECTORS (Velocity, Acceleration, Lags) ───
+    trajectory_cols = ['RSI_14', 'MACDh_ratio', 'BBP_20_2.0', 'returns', 'vol_ratio']
+    for col in trajectory_cols:
+        df[f'{col}_lag1'] = df[col].shift(1)
+        df[f'{col}_lag2'] = df[col].shift(2)
+        df[f'{col}_velocity'] = df[col] - df[f'{col}_lag1']
+        df[f'{col}_acceleration'] = df[f'{col}_velocity'] - (df[f'{col}_lag1'] - df[f'{col}_lag2'])
+    
+    # Drop rows with NaN from indicator warm-up and lag shift
     df.dropna(inplace=True)
 
-    # Build Target Label
-    # Did the price rise by more than `target_pct` % within the next `lookforward` candles?
-    df['future_max'] = df['High'].shift(-lookforward).rolling(lookforward).max()
-    df['target'] = np.where((df['future_max'] - df['Close']) / df['Close'] > (target_pct / 100.0), 1, 0)
+    # ─── DYNAMIC TRIPLE BARRIER LABELING (Volatility-Adjusted Stops) ───
+    atr = df['ATRr_ratio']
+    labels = []
     
-    # Drop the last few rows where we don't have future data
-    df.dropna(inplace=True)
+    for i in range(len(df)):
+        if i >= len(df) - lookforward:
+            labels.append(np.nan)
+            continue
+            
+        price_start = df['Close'].iloc[i]
+        vol_pct = atr.iloc[i] / 100.0
+        
+        # dynamic stop and take-profit targets based on volatility
+        upper_barrier = price_start * (1.0 + 1.5 * vol_pct)
+        lower_barrier = price_start * (1.0 - 1.0 * vol_pct)
+        
+        target_val = 0
+        for j in range(1, lookforward + 1):
+            curr_high = df['High'].iloc[i + j]
+            curr_low = df['Low'].iloc[i + j]
+            
+            # 1. Stop loss barrier check
+            if curr_low <= lower_barrier:
+                target_val = 0
+                break
+            # 2. Take profit barrier check
+            if curr_high >= upper_barrier:
+                target_val = 1
+                break
+                
+        labels.append(target_val)
+        
+    df['target'] = labels
+    df.dropna(subset=['target'], inplace=True)
     
-    # Keep only the feature columns and target
+    # Build complete feature list
     features = [
-        'Open', 'High', 'Low', 'Close', 'Volume',
-        'RSI_14', 'MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9',
-        'EMA_9', 'EMA_21', 'EMA_50', 
-        'BBL_20_2.0', 'BBM_20_2.0', 'BBU_20_2.0', 'BBB_20_2.0', 'BBP_20_2.0',
-        'ATRr_14', 'ADX_14', 'DMP_14', 'DMN_14',
-        'returns', 'vol_ratio'
+        'RSI_14', 'MACDh_ratio',
+        'EMA9_ratio', 'EMA21_ratio', 'EMA50_ratio', 
+        'BBB_20_2.0', 'BBP_20_2.0',
+        'ATRr_ratio', 'ADX_14',
+        'returns', 'spread_pct', 'vol_ratio'
     ]
     
+    # Dynamically append all generated trajectory features
+    for col in trajectory_cols:
+        features += [f'{col}_lag1', f'{col}_lag2', f'{col}_velocity', f'{col}_acceleration']
+        
     available_features = [f for f in features if f in df.columns]
-    
     return df[available_features + ['target']].copy()
 
-def build_universal_dataset(interval="1h", period="1y", target_pct=1.0):
-    symbols = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'BNB-USD']
+def build_universal_dataset(interval="1h", target_pct=1.0):
+    symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT']
     all_data = []
     
-    # Adjust lookforward and target_pct based on interval
-    lookforward = 5
+    lookforward = 15
     adjusted_target_pct = target_pct
     if interval == "15m":
-        lookforward = 8
+        lookforward = 20
         adjusted_target_pct = 0.5
+    elif interval == "1m":
+        lookforward = 30
+        adjusted_target_pct = 0.2
     elif interval == "1d":
-        lookforward = 3
+        lookforward = 8
         adjusted_target_pct = 3.0
         
-    print(f"[*] Building Universal Dataset for {interval}...")
+    print(f"[*] Building Universal Scale-Invariant Dataset with Triple-Barrier Labels for {interval}...")
     for sym in symbols:
-        df = fetch_and_build_dataset(sym, period, interval, lookforward, adjusted_target_pct)
+        df = fetch_and_build_dataset(sym, interval, lookforward, adjusted_target_pct)
         if df is not None and not df.empty:
             all_data.append(df)
             
@@ -131,4 +167,4 @@ def build_universal_dataset(interval="1h", period="1y", target_pct=1.0):
 if __name__ == "__main__":
     import sys
     interval = sys.argv[1] if len(sys.argv) > 1 else "1h"
-    build_universal_dataset(interval=interval, period="1y", target_pct=1.0)
+    build_universal_dataset(interval=interval, target_pct=1.0)

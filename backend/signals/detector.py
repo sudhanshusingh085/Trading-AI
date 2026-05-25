@@ -81,7 +81,7 @@ def detect_signals(candles: list[dict], indicators: dict, interval: str = "1h") 
         s["sell_confluence"] = sell_confluence
 
     # ─── ML PREDICTION ───
-    ml_result = predictor.predict(indicators, latest, interval)
+    ml_result = predictor.predict(indicators, candles, interval)
     if ml_result.get("status") == "ok":
         up = ml_result["up_prob"]
         down = ml_result["down_prob"]
@@ -90,12 +90,12 @@ def detect_signals(candles: list[dict], indicators: dict, interval: str = "1h") 
         if signals:
             signals[0]["ml_prob"] = {"up": up, "down": down}
             
-        if up > 70:
-            signals.append(_psig("AI ML Prediction", "BUY", 5, 70,
+        if up > 80:
+            signals.append(_psig("AI ML Prediction", "BUY", 5, up,
                 f"Machine Learning model predicts {up}% probability of upward move", ts, price))
             buy_confluence += 5
-        elif down > 70:
-            signals.append(_psig("AI ML Prediction", "SELL", 5, 70,
+        elif down > 80:
+            signals.append(_psig("AI ML Prediction", "SELL", 5, down,
                 f"Machine Learning model predicts {down}% probability of downward move", ts, price))
             sell_confluence += 5
 

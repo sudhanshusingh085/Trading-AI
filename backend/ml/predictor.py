@@ -37,15 +37,18 @@ class MLPredictor:
                 print("[*] ML Predictor loaded for 1h (legacy).")
             except Exception: pass
 
-    def predict(self, indicators: dict, current_candle: dict, interval: str = "1h") -> dict:
+    def predict(self, indicators: dict, candles: list[dict], interval: str = "1h") -> dict:
         """
-        Takes the current indicators dict and candle, builds a feature row, 
-        and returns the probability of price going UP.
+        Takes indicators and historical candles list, builds a scale-invariant feature space
+        with momentum trajectory vectors (lags, velocity, acceleration), and returns prediction probability.
         """
         model_data = self.models.get(interval)
+        
+        if not candles or len(candles) < 3:
+            return {"up_prob": 50.0, "down_prob": 50.0, "status": "insufficient_data"}
+
         if not model_data or not model_data["model"] or not model_data["features"]:
             # --- HEURISTIC FALLBACK ---
-            # If model isn't trained yet, provide a realistic dummy calculation based on indicators
             rsi = self._get_last(indicators.get('rsi'))
             macd = self._get_last(indicators.get('macd_histogram'))
             
@@ -55,7 +58,6 @@ class MLPredictor:
             if macd > 0: up_prob += 10
             elif macd < 0: up_prob -= 10
             
-            # Add some random noise to make it look alive
             up_prob += np.random.uniform(-3, 3)
             up_prob = min(99.0, max(1.0, up_prob))
             
@@ -65,48 +67,85 @@ class MLPredictor:
                 "status": "ok"
             }
 
-        # Construct feature row based on what model expects
-        row = {}
-        for feat in model_data["features"]:
-            val = 0.0
+        # Helper to construct scale-invariant features at a dynamic historical step (1=now, 2=lag1, 3=lag2)
+        def get_feature_at_step(n):
+            candle = candles[-n]
+            o_val = candle.get('open', 0.0) or candle.get('Open', 0.0)
+            h_val = candle.get('high', 0.0) or candle.get('High', 0.0)
+            l_val = candle.get('low', 0.0) or candle.get('Low', 0.0)
+            c_val = candle.get('close', 0.0) or candle.get('Close', 0.0)
             
-            # Map features from indicators
-            if feat == 'Open': val = current_candle.get('open', 0)
-            elif feat == 'High': val = current_candle.get('high', 0)
-            elif feat == 'Low': val = current_candle.get('low', 0)
-            elif feat == 'Close': val = current_candle.get('close', 0)
-            elif feat == 'Volume': val = current_candle.get('volume', 0)
-            elif feat == 'RSI_14': val = self._get_last(indicators.get('rsi'))
-            elif feat == 'MACD_12_26_9': val = self._get_last(indicators.get('macd_line'))
-            elif feat == 'MACDh_12_26_9': val = self._get_last(indicators.get('macd_histogram'))
-            elif feat == 'MACDs_12_26_9': val = self._get_last(indicators.get('macd_signal'))
-            elif feat == 'EMA_9': val = self._get_last(indicators.get('ema_9'))
-            elif feat == 'EMA_21': val = self._get_last(indicators.get('ema_21'))
-            elif feat == 'EMA_50': val = self._get_last(indicators.get('ema_50'))
-            elif feat == 'BBL_20_2.0': val = self._get_last(indicators.get('bb_lower'))
-            elif feat == 'BBM_20_2.0': val = self._get_last(indicators.get('bb_mid'))
-            elif feat == 'BBU_20_2.0': val = self._get_last(indicators.get('bb_upper'))
-            elif feat == 'BBB_20_2.0': val = self._get_last(indicators.get('bb_bandwidth'))
-            elif feat == 'BBP_20_2.0': val = self._get_last(indicators.get('bb_percent'))
-            elif feat == 'ATRr_14': val = self._get_last(indicators.get('atr'))
-            elif feat == 'ADX_14': val = self._get_last(indicators.get('adx'))
-            elif feat == 'DMP_14': val = self._get_last(indicators.get('plus_di'))
-            elif feat == 'DMN_14': val = self._get_last(indicators.get('minus_di'))
-            elif feat == 'returns': val = 0.0 # Approximation if not easily available
-            elif feat == 'vol_ratio': val = self._get_last(indicators.get('volume_ratio'))
+            rsi = self._get_nth_last(indicators.get('rsi'), n)
             
-            row[feat] = val
-
-        # Convert to DataFrame
-        df_row = pd.DataFrame([row])
-        
-        # Replace NaNs
-        df_row.fillna(0, inplace=True)
+            macd_hist = self._get_nth_last(indicators.get('macd_histogram'), n)
+            macd_ratio = (macd_hist / c_val * 100) if c_val > 0 else 0.0
+            
+            ema9 = self._get_nth_last(indicators.get('ema_9'), n)
+            ema9_ratio = ((c_val - ema9) / ema9 * 100) if ema9 > 0 else 0.0
+            
+            ema21 = self._get_nth_last(indicators.get('ema_21'), n)
+            ema21_ratio = ((c_val - ema21) / ema21 * 100) if ema21 > 0 else 0.0
+            
+            ema50 = self._get_nth_last(indicators.get('ema_50'), n)
+            ema50_ratio = ((c_val - ema50) / ema50 * 100) if ema50 > 0 else 0.0
+            
+            bbb = self._get_nth_last(indicators.get('bb_bandwidth'), n)
+            
+            bbu = self._get_nth_last(indicators.get('bb_upper'), n)
+            bbl = self._get_nth_last(indicators.get('bb_lower'), n)
+            bbp = ((c_val - bbl) / (bbu - bbl)) if (bbu - bbl) > 0 else 0.5
+            
+            atr = self._get_nth_last(indicators.get('atr'), n)
+            atr_ratio = (atr / c_val * 100) if c_val > 0 else 0.0
+            
+            adx = self._get_nth_last(indicators.get('adx'), n)
+            
+            returns = ((c_val - o_val) / o_val * 100) if o_val > 0 else 0.0
+            spread_pct = ((h_val - l_val) / c_val * 100) if c_val > 0 else 0.0
+            vol_ratio = self._get_nth_last(indicators.get('volume_ratio'), n)
+            
+            return {
+                'RSI_14': rsi,
+                'MACDh_ratio': macd_ratio,
+                'EMA9_ratio': ema9_ratio,
+                'EMA21_ratio': ema21_ratio,
+                'EMA50_ratio': ema50_ratio,
+                'BBB_20_2.0': bbb,
+                'BBP_20_2.0': bbp,
+                'ATRr_ratio': atr_ratio,
+                'ADX_14': adx,
+                'returns': returns,
+                'spread_pct': spread_pct,
+                'vol_ratio': vol_ratio
+            }
 
         try:
+            # Query states at t0, t-1, t-2
+            t0 = get_feature_at_step(1)
+            t1 = get_feature_at_step(2)
+            t2 = get_feature_at_step(3)
+            
+            # Construct row
+            row = {}
+            for k, v in t0.items():
+                row[k] = v
+                
+            # Trajectories matching dataset builder
+            trajectory_cols = ['RSI_14', 'MACDh_ratio', 'BBP_20_2.0', 'returns', 'vol_ratio']
+            for col in trajectory_cols:
+                row[f'{col}_lag1'] = t1[col]
+                row[f'{col}_lag2'] = t2[col]
+                row[f'{col}_velocity'] = t0[col] - t1[col]
+                row[f'{col}_acceleration'] = (t0[col] - t1[col]) - (t1[col] - t2[col])
+            
+            # Match only target trained features in correct order
+            final_row = {feat: row.get(feat, 0.0) for feat in model_data["features"]}
+            
+            df_row = pd.DataFrame([final_row])
+            df_row.fillna(0, inplace=True)
+
             # Predict probability
             probs = model_data["model"].predict_proba(df_row)[0]
-            # Assumes binary classification where class 1 is UP
             down_prob = probs[0] * 100
             up_prob = probs[1] * 100
             return {
@@ -115,11 +154,16 @@ class MLPredictor:
                 "status": "ok"
             }
         except Exception as e:
-            return {"up_prob": 0, "down_prob": 0, "status": f"error: {str(e)}"}
+            return {"up_prob": 50.0, "down_prob": 50.0, "status": f"error: {str(e)}"}
 
     def _get_last(self, ind_list):
         if ind_list and isinstance(ind_list, list) and len(ind_list) > 0:
             return ind_list[-1].get('value', 0.0)
+        return 0.0
+
+    def _get_nth_last(self, ind_list, n=1):
+        if ind_list and isinstance(ind_list, list) and len(ind_list) >= n:
+            return ind_list[-n].get('value', 0.0)
         return 0.0
 
 predictor = MLPredictor()
