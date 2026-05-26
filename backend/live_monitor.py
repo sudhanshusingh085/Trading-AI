@@ -2,6 +2,9 @@
 Live 1-Hour Monitor — Tracks BTCUSDT live predictions from the running app.
 Uses 1-minute candles so we get actionable data within the 1-hour window.
 Polls every 10 seconds, executes virtual trades, tracks P/L, and updates a live Markdown report.
+
+Architecture: State Machine trading with buy→sell pairing
+  IDLE ──(strong entry signal)──► IN_POSITION ──(exit signal/SL/TP)──► COOLDOWN ──(timer)──► IDLE
 """
 import time
 import requests
@@ -16,40 +19,114 @@ POLL_INTERVAL = 10       # 10 seconds
 
 INITIAL_CAPITAL = 10000.0
 POSITION_SIZE = 1000.0   # $1000 per trade
-STOP_LOSS_PCT = 1.0      # 1% stop loss (tightened for 1m timeframe)
+STOP_LOSS_PCT = 1.0      # 1% stop loss
 TAKE_PROFIT_PCT = 2.0    # 2% take profit
 
+# ─── STATE MACHINE CONSTANTS ───
+MIN_HOLD_POLLS = 6       # Minimum 6 polls (60 seconds) before signal-based exit
+COOLDOWN_POLLS = 4       # Wait 4 polls (40 seconds) after exit before re-entry
+MIN_ENTRY_CONFLUENCE = 6  # Minimum confluence score to enter a position
+
+
 class StrategyTracker:
+    """
+    State-machine based strategy tracker implementing buy→sell pairing.
+    
+    States:
+      IDLE         - No position, looking for ENTRY signals
+      IN_POSITION  - Holding a position, looking for EXIT signals / SL / TP
+      COOLDOWN     - Just exited, waiting before re-entry to prevent whipsaw
+    """
+    
     def __init__(self, name):
         self.name = name
         self.capital = INITIAL_CAPITAL
-        self.position = None # {entry_price, qty, timestamp}
-        self.trades = [] # list of closed trade dicts
+        self.position = None  # {entry_price, qty, timestamp, polls_held}
+        self.trades = []      # list of closed trade dicts
+        self.state = "IDLE"   # IDLE | IN_POSITION | COOLDOWN
+        self.cooldown_remaining = 0
 
-    def execute_logic(self, signal, current_price, timestamp):
+    def execute_logic(self, entry_signal, exit_signals, current_price, timestamp, buy_confluence, sell_confluence):
+        """
+        Execute strategy logic based on state machine.
+        
+        Args:
+            entry_signal: "BUY" or None — should we enter a new position?
+            exit_signals: list of exit signal names detected this poll
+            current_price: current market price
+            timestamp: current timestamp
+            buy_confluence: total buy signal strength
+            sell_confluence: total sell signal strength
+        """
         trade_event = None
         
-        # Check SL/TP if in position
-        if self.position:
+        if self.state == "COOLDOWN":
+            self.cooldown_remaining -= 1
+            if self.cooldown_remaining <= 0:
+                self.state = "IDLE"
+            return None  # No trading during cooldown
+        
+        if self.state == "IN_POSITION":
+            self.position["polls_held"] += 1
+            
+            # 1. Always check SL/TP first (no minimum hold for risk management)
             pnl_pct = ((current_price - self.position["entry_price"]) / self.position["entry_price"]) * 100
             if pnl_pct <= -STOP_LOSS_PCT:
                 trade_event = self.close_position(current_price, timestamp, "STOP_LOSS")
+                return trade_event
             elif pnl_pct >= TAKE_PROFIT_PCT:
                 trade_event = self.close_position(current_price, timestamp, "TAKE_PROFIT")
-
-        # Process standard entry/exit signals if SL/TP didn't fire
-        if not trade_event:
-            if signal == "BUY" and not self.position:
+                return trade_event
+            
+            # 2. Signal-based exit only after minimum hold time
+            if self.position["polls_held"] >= MIN_HOLD_POLLS:
+                should_exit, reason = self._check_exit_conditions(
+                    exit_signals, current_price, buy_confluence, sell_confluence
+                )
+                if should_exit:
+                    trade_event = self.close_position(current_price, timestamp, reason)
+                    return trade_event
+            
+            return None  # Stay in position
+        
+        if self.state == "IDLE":
+            # Only enter on strong signals
+            if entry_signal == "BUY":
                 self.position = {
                     "entry_price": current_price,
                     "qty": POSITION_SIZE / current_price,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "polls_held": 0
                 }
-                trade_event = f"🟢 ENTER LONG @ ${current_price:,.2f}"
-            elif signal == "SELL" and self.position:
-                trade_event = self.close_position(current_price, timestamp, "SIGNAL")
-                
+                self.state = "IN_POSITION"
+                return f"🟢 ENTER LONG @ ${current_price:,.2f}"
+        
         return trade_event
+
+    def _check_exit_conditions(self, exit_signals, current_price, buy_confluence, sell_confluence):
+        """
+        Determine if we should exit the position based on detected EXIT signals.
+        Returns (should_exit: bool, reason: str)
+        """
+        # Exit if sell confluence strongly dominates (reversal)
+        if sell_confluence > buy_confluence + 4:
+            return True, "REVERSAL"
+        
+        # Exit if specific reversal patterns are detected
+        reversal_patterns = [
+            "Bearish Engulfing", "Evening Star", "Dark Cloud Cover",
+            "Head and Shoulders", "Double Top", "MACD Bearish Cross",
+            "EMA 9/21 Death Cross", "Three White Soldiers (Exhaustion)"
+        ]
+        for sig_name in exit_signals:
+            if sig_name in reversal_patterns:
+                return True, f"SIGNAL"
+        
+        # Exit if ML flips strongly bearish
+        if "AI ML Prediction" in exit_signals and sell_confluence > buy_confluence:
+            return True, "ML_REVERSAL"
+        
+        return False, ""
 
     def close_position(self, current_price, timestamp, reason):
         entry_price = self.position["entry_price"]
@@ -64,12 +141,63 @@ class StrategyTracker:
             "exit_price": current_price,
             "pnl": pnl,
             "pnl_pct": pnl_pct,
-            "reason": reason
+            "reason": reason,
+            "hold_polls": self.position["polls_held"]
         }
         self.trades.append(trade)
         self.capital += pnl
         self.position = None
+        self.state = "COOLDOWN"
+        self.cooldown_remaining = COOLDOWN_POLLS
         return f"🔴 EXIT LONG @ ${current_price:,.2f} ({reason}) | P/L: ${pnl:+.2f} ({pnl_pct:+.2f}%)"
+
+
+def _extract_entry_signal_ml(active_signals, buy_confluence, sell_confluence):
+    """
+    Determine if ML engine should enter based on ML prediction + confirming signals.
+    Returns "BUY" or None.
+    """
+    ml_signal = None
+    for s in active_signals:
+        if s["name"] == "AI ML Prediction" and s["direction"] == "BUY":
+            ml_signal = s
+            break
+    
+    if not ml_signal:
+        return None
+    
+    # ML needs at least 1 confirming technical signal
+    confirming_signals = [s for s in active_signals 
+                         if s["direction"] == "BUY" 
+                         and s["name"] != "AI ML Prediction"
+                         and s.get("signal_role") == "ENTRY"]
+    
+    if len(confirming_signals) >= 1:
+        return "BUY"
+    
+    return None
+
+
+def _extract_entry_signal_verdict(verdict, buy_confluence, sell_confluence):
+    """
+    Determine if verdict engine should enter based on verdict + minimum confluence.
+    Returns "BUY" or None.
+    """
+    if verdict in ("BUY", "STRONG BUY") and buy_confluence >= MIN_ENTRY_CONFLUENCE:
+        return "BUY"
+    return None
+
+
+def _extract_exit_signals(active_signals, direction="SELL"):
+    """Extract names of signals that suggest exiting a long position."""
+    exit_names = []
+    for s in active_signals:
+        if s.get("direction") == direction:
+            exit_names.append(s["name"])
+        elif s.get("signal_role") == "EXIT" and s.get("direction") == direction:
+            exit_names.append(s["name"])
+    return exit_names
+
 
 def generate_report(elapsed, remaining, current_price, last_update, active_signals, verdict, ml_tracker, verdict_tracker, log_entries):
     ml_pnl = ml_tracker.capital - INITIAL_CAPITAL
@@ -98,14 +226,14 @@ This report is updating in real-time every 10 seconds. Open this file in VS Code
 ## 📊 Live Signal Status
 - **Current Confluence Verdict:** `{verdict}`
 - **Active Signals Detected:**
-{chr(10).join([f"  - `{s['name']}` ({s['direction']} | strength: {s['strength']})" for s in active_signals]) if active_signals else "  - None (Neutral)"}
+{chr(10).join([f"  - `{s['name']}` ({s['direction']} | strength: {s['strength']} | role: {s.get('signal_role', 'ENTRY')})" for s in active_signals]) if active_signals else "  - None (Neutral)"}
 
 ---
 
-## 🤖 Strategy 1: AI/ML Engine
+## 🤖 Strategy 1: AI/ML Engine [{ml_tracker.state}]
 - **Account Balance:** ${ml_tracker.capital:,.2f}
 - **Net Realized P/L:** ${ml_pnl:+.2f} ({ml_pnl/INITIAL_CAPITAL*100:+.2f}%)
-- **Active Position:** {"None" if not ml_tracker.position else f"LONG from ${ml_tracker.position['entry_price']:,.2f} (Current Open P/L: ${ml_live_pnl:+.2f})"}
+- **Active Position:** {"None" if not ml_tracker.position else f"LONG from ${ml_tracker.position['entry_price']:,.2f} (Hold: {ml_tracker.position['polls_held']} polls | Open P/L: ${ml_live_pnl:+.2f})"}
 - **Closed Trades:** {len(ml_tracker.trades)}
 
 ### ML Trade Log
@@ -120,10 +248,10 @@ This report is updating in real-time every 10 seconds. Open this file in VS Code
     report += f"""
 ---
 
-## ⚖️ Strategy 2: Confluence Verdict Engine
+## ⚖️ Strategy 2: Confluence Verdict Engine [{verdict_tracker.state}]
 - **Account Balance:** ${verdict_tracker.capital:,.2f}
 - **Net Realized P/L:** ${verdict_pnl:+.2f} ({verdict_pnl/INITIAL_CAPITAL*100:+.2f}%)
-- **Active Position:** {"None" if not verdict_tracker.position else f"LONG from ${verdict_tracker.position['entry_price']:,.2f} (Current Open P/L: ${v_live_pnl:+.2f})"}
+- **Active Position:** {"None" if not verdict_tracker.position else f"LONG from ${verdict_tracker.position['entry_price']:,.2f} (Hold: {verdict_tracker.position['polls_held']} polls | Open P/L: ${v_live_pnl:+.2f})"}
 - **Closed Trades:** {len(verdict_tracker.trades)}
 
 ### Verdict Trade Log
@@ -147,12 +275,12 @@ This report is updating in real-time every 10 seconds. Open this file in VS Code
         f.write(report)
 
 def main():
-    print("[*] Starting live 1-hour BTCUSDT test monitor...")
+    print("[*] Starting live 1-hour BTCUSDT test monitor (v2 — state machine)...")
     ml_tracker = StrategyTracker("AI/ML Engine")
     verdict_tracker = StrategyTracker("Verdict Engine")
     
     start_time = time.time()
-    log_entries = ["System initialized. Monitoring live Binance feed via backend API..."]
+    log_entries = ["System initialized (v2). State machine trading with buy→sell pairing active."]
     
     # Pre-populate report
     generate_report(0, DURATION_SECONDS, 0.0, "Initializing...", [], "INITIALIZING", ml_tracker, verdict_tracker, log_entries)
@@ -174,26 +302,28 @@ def main():
                 active_signals = data["signals"]
                 timestamp = data["candles"][-1]["timestamp"]
                 
-                # Extract ML signal direction
-                ml_signal_dir = None
-                for s in active_signals:
-                    if s["name"] == "AI ML Prediction":
-                        ml_signal_dir = s["direction"]
-                        break
+                # Extract confluence scores
+                buy_confluence = active_signals[0].get("buy_confluence", 0) if active_signals else 0
+                sell_confluence = active_signals[0].get("sell_confluence", 0) if active_signals else 0
                 
-                # Verdict signal direction
-                v_signal_dir = None
-                if verdict in ("BUY", "STRONG BUY"):
-                    v_signal_dir = "BUY"
-                elif verdict in ("SELL", "STRONG SELL"):
-                    v_signal_dir = "SELL"
+                # Extract exit signals (SELL direction signals for exiting longs)
+                exit_signal_names = _extract_exit_signals(active_signals, "SELL")
                 
-                # Execute Strategy Logic
-                ml_event = ml_tracker.execute_logic(ml_signal_dir, current_price, timestamp)
+                # ─── ML ENGINE (needs ML prediction + confirming signal) ───
+                ml_entry = _extract_entry_signal_ml(active_signals, buy_confluence, sell_confluence)
+                ml_event = ml_tracker.execute_logic(
+                    ml_entry, exit_signal_names, current_price, timestamp,
+                    buy_confluence, sell_confluence
+                )
                 if ml_event:
                     log_entries.append(f"[{last_update}] [ML] {ml_event}")
                     
-                v_event = verdict_tracker.execute_logic(v_signal_dir, current_price, timestamp)
+                # ─── VERDICT ENGINE (needs strong verdict + minimum confluence) ───
+                v_entry = _extract_entry_signal_verdict(verdict, buy_confluence, sell_confluence)
+                v_event = verdict_tracker.execute_logic(
+                    v_entry, exit_signal_names, current_price, timestamp,
+                    buy_confluence, sell_confluence
+                )
                 if v_event:
                     log_entries.append(f"[{last_update}] [VERDICT] {v_event}")
                     

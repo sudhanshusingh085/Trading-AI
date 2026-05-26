@@ -48,18 +48,42 @@ class MLPredictor:
             return {"up_prob": 50.0, "down_prob": 50.0, "status": "insufficient_data"}
 
         if not model_data or not model_data["model"] or not model_data["features"]:
-            # --- HEURISTIC FALLBACK ---
+            # --- HEURISTIC FALLBACK (no random noise — deterministic) ---
             rsi = self._get_last(indicators.get('rsi'))
             macd = self._get_last(indicators.get('macd_histogram'))
+            stoch_k = self._get_last(indicators.get('stoch_k'))
+            adx = self._get_last(indicators.get('adx'))
+            ema9 = self._get_last(indicators.get('ema_9'))
+            ema21 = self._get_last(indicators.get('ema_21'))
+            price = candles[-1].get('close', 0) if candles else 0
             
             up_prob = 50.0
-            if rsi < 30: up_prob += 15
-            elif rsi > 70: up_prob -= 15
-            if macd > 0: up_prob += 10
-            elif macd < 0: up_prob -= 10
             
-            up_prob += np.random.uniform(-3, 3)
-            up_prob = min(99.0, max(1.0, up_prob))
+            # RSI signal (strong mean-reversion signal)
+            if rsi < 25: up_prob += 18
+            elif rsi < 30: up_prob += 12
+            elif rsi > 75: up_prob -= 18
+            elif rsi > 70: up_prob -= 12
+            
+            # MACD histogram momentum
+            if macd > 0: up_prob += 8
+            elif macd < 0: up_prob -= 8
+            
+            # Stochastic confirmation
+            if stoch_k < 20: up_prob += 6
+            elif stoch_k > 80: up_prob -= 6
+            
+            # Trend direction (EMA 9 vs 21)
+            if ema9 > 0 and ema21 > 0:
+                if ema9 > ema21: up_prob += 5
+                elif ema9 < ema21: up_prob -= 5
+            
+            # Strong trend filter (ADX > 25 = trending, amplify signals)
+            if adx > 25 and abs(up_prob - 50) > 5:
+                direction = 1 if up_prob > 50 else -1
+                up_prob += direction * 5
+            
+            up_prob = min(95.0, max(5.0, up_prob))
             
             return {
                 "up_prob": round(up_prob, 1),

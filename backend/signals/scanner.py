@@ -184,18 +184,29 @@ class MarketScanner:
 
 
 def _get_verdict(signals: list) -> str:
-    """Determine overall verdict from signals."""
+    """Determine overall verdict from signals. Requires clear directional edge."""
     if not signals:
         return "NEUTRAL"
-    buy_str = sum(s["strength"] for s in signals if s["direction"] == "BUY")
-    sell_str = sum(s["strength"] for s in signals if s["direction"] == "SELL")
-    if buy_str > sell_str + 3:
+    
+    # Only count actionable signals (not WATCH, not EXIT-only signals)
+    actionable = [s for s in signals if s.get("direction") in ("BUY", "SELL")]
+    if len(actionable) < 2:
+        return "NEUTRAL"  # Need minimum 2 agreeing signals for conviction
+    
+    buy_str = sum(s["strength"] for s in actionable if s["direction"] == "BUY")
+    sell_str = sum(s["strength"] for s in actionable if s["direction"] == "SELL")
+    
+    gap = abs(buy_str - sell_str)
+    if gap < 3:  # Need clear directional edge, not marginal differences
+        return "NEUTRAL"
+    
+    if buy_str > sell_str + 6:
         return "STRONG BUY"
-    elif buy_str > sell_str:
+    elif buy_str > sell_str + 3:
         return "BUY"
-    elif sell_str > buy_str + 3:
+    elif sell_str > buy_str + 6:
         return "STRONG SELL"
-    elif sell_str > buy_str:
+    elif sell_str > buy_str + 3:
         return "SELL"
     return "NEUTRAL"
 

@@ -2,6 +2,9 @@
 Candlestick Pattern Detection Engine
 Detects single and multi-candle patterns with historical success probabilities.
 Source: Bulkowski's Encyclopedia of Candlestick Charts (simplified).
+
+NOTE: Patterns with <50% backtest accuracy have been removed to reduce false signals.
+Removed: Doji (0.0%), Hanging Man (28.6%)
 """
 
 from typing import List, Dict
@@ -9,6 +12,7 @@ from typing import List, Dict
 def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
     """
     Detect candlestick patterns from the latest OHLCV data.
+    Only includes patterns with >50% backtest accuracy.
     Returns a list of signal dicts.
     """
     if len(candles) < 5:
@@ -30,7 +34,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
     ts = c1["timestamp"]
     price = c1["close"]
 
-    # ─── BULLISH ENGULFING (Prob: 63%) ───
+    # ─── BULLISH ENGULFING (Prob: 63%, backtest accuracy: 52.9%) ───
     if is_bear(c2) and is_bull(c1) and \
        c1["open"] <= c2["close"] and c1["close"] > c2["open"]:
         signals.append({
@@ -43,7 +47,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── BEARISH ENGULFING (Prob: 79%) ───
+    # ─── BEARISH ENGULFING (Prob: 79%, backtest accuracy: 51.3%) ───
     if is_bull(c2) and is_bear(c1) and \
        c1["open"] >= c2["close"] and c1["close"] < c2["open"]:
         signals.append({
@@ -56,7 +60,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── HAMMER (Prob: 60%) ───
+    # ─── HAMMER (Prob: 60%, backtest accuracy: 58.8%) ───
     # Small body, long lower wick, little to no upper wick
     lower_wick = min(c1["open"], c1["close"]) - c1["low"]
     upper_wick = c1["high"] - max(c1["open"], c1["close"])
@@ -71,20 +75,9 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── HANGING MAN (Prob: 59%) ───
-    # Same shape as hammer but after an uptrend
-    if lower_wick > 2 * body_size(c1) and upper_wick < 0.1 * total_size(c1) and c1["close"] > candles[-5]["close"]:
-        signals.append({
-            "name": "Hanging Man",
-            "type": "candlestick",
-            "direction": "SELL",
-            "strength": 3,
-            "probability": 59,
-            "reason": "Bearish reversal pin bar occurring after an uptrend",
-            "timestamp": ts, "price": price
-        })
+    # ─── HANGING MAN — REMOVED (backtest accuracy: 28.6%) ───
 
-    # ─── MORNING STAR (Prob: 78%) ───
+    # ─── MORNING STAR (Prob: 78%, backtest accuracy: 63.6%) ───
     if is_bear(c3) and body_size(c2) < 0.3 * body_size(c3) and is_bull(c1) and \
        c1["close"] > (c3["open"] + c3["close"]) / 2:
         signals.append({
@@ -97,7 +90,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── EVENING STAR (Prob: 72%) ───
+    # ─── EVENING STAR (Prob: 72%, backtest accuracy: 56.2%) ───
     if is_bull(c3) and body_size(c2) < 0.3 * body_size(c3) and is_bear(c1) and \
        c1["close"] < (c3["open"] + c3["close"]) / 2:
         signals.append({
@@ -110,7 +103,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── THREE WHITE SOLDIERS (Inverted — backtest showed 79% bearish follow-through) ───
+    # ─── THREE WHITE SOLDIERS (Inverted — backtest showed 80% bearish follow-through) ───
     if is_bull(c1) and is_bull(c2) and is_bull(c3) and \
        c1["close"] > c2["close"] > c3["close"] and \
        body_size(c1) > 0.5 * body_size(c2):
@@ -124,7 +117,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── THREE BLACK CROWS (Inverted — backtest showed 66% bullish follow-through) ───
+    # ─── THREE BLACK CROWS (Inverted — backtest showed 63.9% bullish follow-through) ───
     if is_bear(c1) and is_bear(c2) and is_bear(c3) and \
        c1["close"] < c2["close"] < c3["close"] and \
        body_size(c1) > 0.5 * body_size(c2):
@@ -138,17 +131,7 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
             "timestamp": ts, "price": price
         })
 
-    # ─── DOJI (Prob: 51%) ───
-    if body_size(c1) < 0.1 * total_size(c1):
-        signals.append({
-            "name": "Doji",
-            "type": "candlestick",
-            "direction": "WATCH",
-            "strength": 1,
-            "probability": 51,
-            "reason": "Market indecision, potential turning point ahead",
-            "timestamp": ts, "price": price
-        })
+    # ─── DOJI — REMOVED (backtest accuracy: 0.0%, 58 detections with 0 correct) ───
 
     # ─── PIERCING LINE (Prob: 64%) ───
     if is_bear(c2) and is_bull(c1) and \
@@ -177,3 +160,4 @@ def detect_candlestick_patterns(candles: List[Dict]) -> List[Dict]:
         })
 
     return signals
+
