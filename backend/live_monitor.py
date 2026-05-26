@@ -237,11 +237,11 @@ This report is updating in real-time every 10 seconds. Open this file in VS Code
     for entry in log_entries[-15:]:
         report += f"- {entry}\n"
         
-    with open(REPORT_PATH, "w") as f:
+    with open(REPORT_PATH, "w", encoding="utf-8") as f:
         f.write(report)
 
 def main():
-    print("[*] Starting live 1-hour BTCUSDT test monitor (v2 — state machine)...")
+    print("[*] Starting live 1-hour BTCUSDT test monitor (v2 - state machine)...")
     ml_tracker = StrategyTracker("AI/ML Engine")
     verdict_tracker = StrategyTracker("Verdict Engine")
     
