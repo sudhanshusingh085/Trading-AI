@@ -46,51 +46,42 @@ class StrategyTracker:
         self.state = "IDLE"   # IDLE | IN_POSITION | COOLDOWN
         self.cooldown_remaining = 0
 
-    def execute_logic(self, entry_signal, exit_signals, current_price, timestamp, buy_confluence, sell_confluence):
+    def execute_logic(self, entry_signal, sell_verdict, ml_says_sell, current_price, timestamp):
         """
-        Execute strategy logic based on state machine.
+        Simple state machine: BUY when signaled, HOLD, exit only when SELL is signaled.
         
         Args:
-            entry_signal: "BUY" or None — should we enter a new position?
-            exit_signals: list of exit signal names detected this poll
+            entry_signal: "BUY" or None — should we enter?
+            sell_verdict: True if verdict/ML explicitly says SELL now
+            ml_says_sell: True if ML prediction flipped to SELL
             current_price: current market price
             timestamp: current timestamp
-            buy_confluence: total buy signal strength
-            sell_confluence: total sell signal strength
         """
-        trade_event = None
-        
         if self.state == "COOLDOWN":
             self.cooldown_remaining -= 1
             if self.cooldown_remaining <= 0:
                 self.state = "IDLE"
-            return None  # No trading during cooldown
+            return None
         
         if self.state == "IN_POSITION":
             self.position["polls_held"] += 1
             
-            # 1. Always check SL/TP first (no minimum hold for risk management)
+            # 1. Risk management: SL/TP always active
             pnl_pct = ((current_price - self.position["entry_price"]) / self.position["entry_price"]) * 100
             if pnl_pct <= -STOP_LOSS_PCT:
-                trade_event = self.close_position(current_price, timestamp, "STOP_LOSS")
-                return trade_event
-            elif pnl_pct >= TAKE_PROFIT_PCT:
-                trade_event = self.close_position(current_price, timestamp, "TAKE_PROFIT")
-                return trade_event
+                return self.close_position(current_price, timestamp, "STOP_LOSS")
+            if pnl_pct >= TAKE_PROFIT_PCT:
+                return self.close_position(current_price, timestamp, "TAKE_PROFIT")
             
-            # 2. Signal-based exit only after minimum hold time
+            # 2. Hold until explicit SELL (after minimum hold time)
             if self.position["polls_held"] >= MIN_HOLD_POLLS:
-                should_exit, reason = self._check_exit_conditions(
-                    exit_signals, current_price, buy_confluence, sell_confluence
-                )
-                if should_exit:
-                    trade_event = self.close_position(current_price, timestamp, reason)
-                    return trade_event
+                if sell_verdict or ml_says_sell:
+                    reason = "SELL_SIGNAL"
+                    return self.close_position(current_price, timestamp, reason)
             
-            return None  # Stay in position
+            return None  # Keep holding
         
         if self.state == "IDLE":
-            # Only enter on strong signals
             if entry_signal == "BUY":
                 self.position = {
                     "entry_price": current_price,
@@ -99,34 +90,9 @@ class StrategyTracker:
                     "polls_held": 0
                 }
                 self.state = "IN_POSITION"
-                return f"🟢 ENTER LONG @ ${current_price:,.2f}"
+                return f"ENTER LONG @ ${current_price:,.2f}"
         
-        return trade_event
-
-    def _check_exit_conditions(self, exit_signals, current_price, buy_confluence, sell_confluence):
-        """
-        Determine if we should exit the position based on detected EXIT signals.
-        Returns (should_exit: bool, reason: str)
-        """
-        # Exit if sell confluence strongly dominates (reversal)
-        if sell_confluence > buy_confluence + 4:
-            return True, "REVERSAL"
-        
-        # Exit if specific reversal patterns are detected
-        reversal_patterns = [
-            "Bearish Engulfing", "Evening Star", "Dark Cloud Cover",
-            "Head and Shoulders", "Double Top", "MACD Bearish Cross",
-            "EMA 9/21 Death Cross", "Three White Soldiers (Exhaustion)"
-        ]
-        for sig_name in exit_signals:
-            if sig_name in reversal_patterns:
-                return True, f"SIGNAL"
-        
-        # Exit if ML flips strongly bearish
-        if "AI ML Prediction" in exit_signals and sell_confluence > buy_confluence:
-            return True, "ML_REVERSAL"
-        
-        return False, ""
+        return None
 
     def close_position(self, current_price, timestamp, reason):
         entry_price = self.position["entry_price"]
@@ -306,23 +272,24 @@ def main():
                 buy_confluence = active_signals[0].get("buy_confluence", 0) if active_signals else 0
                 sell_confluence = active_signals[0].get("sell_confluence", 0) if active_signals else 0
                 
-                # Extract exit signals (SELL direction signals for exiting longs)
-                exit_signal_names = _extract_exit_signals(active_signals, "SELL")
+                # Check if ML says SELL
+                ml_says_sell = any(s["name"] == "AI ML Prediction" and s["direction"] == "SELL" for s in active_signals)
                 
-                # ─── ML ENGINE (needs ML prediction + confirming signal) ───
+                # Check if verdict says SELL
+                verdict_says_sell = verdict in ("SELL", "STRONG SELL")
+                
+                # ─── ML ENGINE: enter on ML BUY + confirming signal, exit on SELL ───
                 ml_entry = _extract_entry_signal_ml(active_signals, buy_confluence, sell_confluence)
                 ml_event = ml_tracker.execute_logic(
-                    ml_entry, exit_signal_names, current_price, timestamp,
-                    buy_confluence, sell_confluence
+                    ml_entry, ml_says_sell, ml_says_sell, current_price, timestamp
                 )
                 if ml_event:
                     log_entries.append(f"[{last_update}] [ML] {ml_event}")
                     
-                # ─── VERDICT ENGINE (needs strong verdict + minimum confluence) ───
+                # ─── VERDICT ENGINE: enter on BUY verdict, exit on SELL verdict ───
                 v_entry = _extract_entry_signal_verdict(verdict, buy_confluence, sell_confluence)
                 v_event = verdict_tracker.execute_logic(
-                    v_entry, exit_signal_names, current_price, timestamp,
-                    buy_confluence, sell_confluence
+                    v_entry, verdict_says_sell, ml_says_sell, current_price, timestamp
                 )
                 if v_event:
                     log_entries.append(f"[{last_update}] [VERDICT] {v_event}")
