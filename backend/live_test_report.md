@@ -1,51 +1,53 @@
-# 🔴 LIVE 1-HOUR TRADING AI TEST REPORT
+# 🔴 LIVE 2-HOUR MULTI-TIMEFRAME TRADING AI TEST REPORT
 
-This report is updating in real-time every 10 seconds. Open this file in VS Code (`Ctrl+Shift+V` or `Cmd+Shift+V` for Preview) to watch the live simulation!
+This report updates in real-time every 10 seconds. Open this file in VS Code (`Ctrl+Shift+V` or `Cmd+Shift+V` for Preview) to watch the live simulation!
 
 - **Status:** Running 🟢
-- **Time Elapsed:** 5m 30s / 60m 00s
-- **Last Updated:** 2026-05-26 23:04:15
-- **Current BTCUSDT Price:** **$75,912.52**
+- **Time Elapsed:** 0h 3m 6s / 2h 00m 00s
+- **Last Updated:** 2026-05-27 22:40:18
+- **Current BTCUSDT Price:** **$75,125.88**
 
 ---
 
-## 📊 Live Signal Status
-- **Current Confluence Verdict:** `NEUTRAL`
-- **Active Signals Detected:**
-  - `Head and Shoulders` (SELL | strength: 5 | role: ENTRY)
-  - `AI ML Prediction` (BUY | strength: 3 | role: ENTRY)
-  - `RSI Oversold` (BUY | strength: 4 | role: ENTRY)
+## 🌐 Multi-Timeframe Trend Alignment (Base: 1m | Filter: 5m)
+- **Base Timeframe (1m) Confluence Verdict:** `BUY`
+- **Filter Timeframe (5m) Trend Verdict:** `NEUTRAL`
+- **Trend Filter Status:** **🔄 BIDIRECTIONAL (Longs and Shorts permitted)**
+- **Active 5m Signals:** `Inverse Head and Shoulders` (BUY), `EMA 9/21 Death Cross` (SELL), `MACD Momentum Weakening` (SELL)
 
 ---
 
-## 🤖 Strategy 1: AI/ML Engine [IN_POSITION]
+## 📊 Live Base Signal Status (1m setups)
+- **Active 1m Signals Detected:**
+  - `Bollinger Bounce` (BUY | strength: 3 | role: ENTRY)
+
+---
+
+## 🤖 Strategy 1: AI/ML Engine [IDLE]
 - **Account Balance:** $10,000.00
 - **Net Realized P/L:** $+0.00 (+0.00%)
-- **Active Position:** LONG from $76,093.76 (Hold: 28 polls | Open P/L: $-2.38)
+- **Active Position:** None
 - **Closed Trades:** 0
 
 ### ML Trade Log
-| Entry Time | Exit Time | Entry Price | Exit Price | P/L ($) | P/L (%) | Reason |
-|---|---|---|---|---|---|---|
-| - | - | - | - | - | - | - |
+| Direction | Entry Time | Exit Time | Entry Price | Exit Price | P/L ($) | P/L (%) | Reason |
+|---|---|---|---|---|---|---|---|
+| - | - | - | - | - | - | - | - |
 
 ---
 
-## ⚖️ Strategy 2: Confluence Verdict Engine [IN_POSITION]
+## ⚖️ Strategy 2: Confluence Verdict Engine [IDLE]
 - **Account Balance:** $10,000.00
 - **Net Realized P/L:** $+0.00 (+0.00%)
-- **Active Position:** LONG from $76,093.76 (Hold: 28 polls | Open P/L: $-2.38)
+- **Active Position:** None
 - **Closed Trades:** 0
 
 ### Verdict Trade Log
-| Entry Time | Exit Time | Entry Price | Exit Price | P/L ($) | P/L (%) | Reason |
-|---|---|---|---|---|---|---|
-| - | - | - | - | - | - | - |
+| Direction | Entry Time | Exit Time | Entry Price | Exit Price | P/L ($) | P/L (%) | Reason |
+|---|---|---|---|---|---|---|---|
+| - | - | - | - | - | - | - | - |
 
 ---
 
 ## 📋 Activity Log (Last 15 events)
-- System initialized (v2). State machine trading with buy→sell pairing active.
-- [2026-05-26 22:58:44] [ML] ENTER LONG @ $76,093.76
-- [2026-05-26 22:58:44] [VERDICT] ENTER LONG @ $76,093.76
-- [2026-05-26 22:59:43] Fetch failed: HTTPConnectionPool(host='127.0.0.1', port=8000): Read timed out. (read timeout=5)
+- System initialized. Dynamic ATR stops, 5m hold constraints, and volume filters active.

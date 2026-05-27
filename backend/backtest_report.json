@@ -1,7 +1,7 @@
 {
   "symbol": "BTCUSDT",
   "interval": "1h",
-  "period": "2026-05-06 02:30:00 to 2026-05-26 21:30:00",
+  "period": "2026-05-06 03:30:00 to 2026-05-26 22:30:00",
   "config": {
     "min_hold_candles": 3,
     "cooldown_candles": 2,
@@ -375,7 +375,7 @@
     "pnl": 121205.72,
     "return_pct": 1212.06
   },
-  "buy_and_hold_return_pct": -4.22,
+  "buy_and_hold_return_pct": -5.22,
   "pattern_stats": {
     "Bullish Engulfing": {
       "total": 36,

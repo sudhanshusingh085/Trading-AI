@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "symbol": "BTCUSDT",
+    "interval": "1h",
+    "candles": 1000,
+    "period": "2026-04-16 03:30:00 \u2192 2026-05-27 18:30:00",
+    "config": {
+      "initial_capital": 10000.0,
+      "position_size_pct": 10.0,
+      "stop_loss_pct": 2.0,
+      "take_profit_pct": 4.0,
+      "commission_pct": 0.1,
+      "min_hold_candles": 3,
+      "cooldown_candles": 2,
+      "min_entry_conf": 6
+    }
+  },
+  "buy_and_hold_pct": 0.03,
+  "ml_engine": {
+    "stats": {},
+    "trades": [],
+    "equity_curve": [
+      10000.0,
+      10000.0,
+      10000.0,
+      10000.0,
+      10000.0
+    ]
+  },
+  "verdict_engine": {
+    "stats": {},
+    "trades": [],
+    "equity_curve": [
+      10000.0,
+      10000.0,
+      10000.0,
+      10000.0,
+      10000.0
+    ]
+  }
+}
