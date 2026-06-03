@@ -4,15 +4,16 @@ import os
 
 # Import pure pandas indicator helpers from the existing backend calculator
 from backend.indicators.calculator import _ema, _rsi, _true_range, _adx
-from backend.data.crypto_fetcher import get_historical_data_sync
+from backend.data.crypto_fetcher import get_historical_data_sync_large
 
 def fetch_and_build_dataset(symbol="BTCUSDT", interval="1h", lookforward=15, target_pct=1.0):
     """
-    Fetches historical data from Binance, computes scale-invariant relative features,
-    adds trend trajectories (velocity, acceleration, lags), and uses dynamic Triple Barrier labeling.
+    Fetches historical data from Binance via paginated API (5,000 candles per symbol),
+    computes scale-invariant relative features, adds trend trajectories
+    (velocity, acceleration, lags), and uses dynamic Triple Barrier labeling.
     """
-    print(f"[*] Fetching {symbol} data at {interval} interval from Binance...")
-    data = get_historical_data_sync(symbol, interval=interval, limit=1000)
+    print(f"[*] Fetching {symbol} data at {interval} interval from Binance (paginated)...")
+    data = get_historical_data_sync_large(symbol, interval=interval, total_candles=5000)
     
     if not data or "candles" not in data:
         print(f"[-] Failed to fetch data: {data.get('error') if data else 'Unknown error'}")
@@ -89,25 +90,26 @@ def fetch_and_build_dataset(symbol="BTCUSDT", interval="1h", lookforward=15, tar
             
         price_start = df['Close'].iloc[i]
         vol_pct = atr.iloc[i] / 100.0
-        
-        # dynamic stop and take-profit targets based on volatility
-        upper_barrier = price_start * (1.0 + 1.5 * vol_pct)
-        lower_barrier = price_start * (1.0 - 1.0 * vol_pct)
-        
+
+        # Symmetric barriers: equal risk/reward at 1.5× ATR
+        # This avoids class imbalance caused by the old asymmetric (1.5 TP / 1.0 SL) targets.
+        upper_barrier = price_start * (1.0 + 1.5 * vol_pct)  # Take-profit
+        lower_barrier = price_start * (1.0 - 1.5 * vol_pct)  # Stop-loss (now symmetric)
+
         target_val = 0
         for j in range(1, lookforward + 1):
             curr_high = df['High'].iloc[i + j]
-            curr_low = df['Low'].iloc[i + j]
-            
-            # 1. Stop loss barrier check
+            curr_low  = df['Low'].iloc[i + j]
+
+            # 1. Stop-loss hit first → label 0 (bearish outcome)
             if curr_low <= lower_barrier:
                 target_val = 0
                 break
-            # 2. Take profit barrier check
+            # 2. Take-profit hit first → label 1 (bullish outcome)
             if curr_high >= upper_barrier:
                 target_val = 1
                 break
-                
+
         labels.append(target_val)
         
     df['target'] = labels
@@ -130,9 +132,13 @@ def fetch_and_build_dataset(symbol="BTCUSDT", interval="1h", lookforward=15, tar
     return df[available_features + ['target']].copy()
 
 def build_universal_dataset(interval="1h", target_pct=1.0):
-    symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT']
+    # 8 pairs with different market-cap / volatility profiles to reduce BTC-regime overfitting
+    symbols = [
+        'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT',
+        'BNBUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT'
+    ]
     all_data = []
-    
+
     lookforward = 15
     adjusted_target_pct = target_pct
     if interval == "15m":
@@ -144,8 +150,8 @@ def build_universal_dataset(interval="1h", target_pct=1.0):
     elif interval == "1d":
         lookforward = 8
         adjusted_target_pct = 3.0
-        
-    print(f"[*] Building Universal Scale-Invariant Dataset with Triple-Barrier Labels for {interval}...")
+
+    print(f"[*] Building Universal Scale-Invariant Dataset ({len(symbols)} pairs × 5000 candles) for {interval}...")
     for sym in symbols:
         df = fetch_and_build_dataset(sym, interval, lookforward, adjusted_target_pct)
         if df is not None and not df.empty:

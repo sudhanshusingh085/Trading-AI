@@ -161,6 +161,97 @@ def get_historical_data_sync(
         return {"error": f"Failed to fetch crypto data: {str(e)}"}
 
 
+def get_historical_data_sync_large(
+    symbol: str,
+    interval: str = "1h",
+    total_candles: int = 5000
+) -> Optional[dict]:
+    """
+    Paginated sync fetcher — overcomes Binance's 1000-candle-per-call limit.
+    Chains multiple API calls walking backwards in time, then merges chronologically.
+
+    Args:
+        symbol:        Trading pair (e.g., "BTCUSDT")
+        interval:      Candle interval (1m, 5m, 15m, 1h, 4h, 1d …)
+        total_candles: How many candles to fetch in total (max ~5000 recommended)
+
+    Returns:
+        Same dict shape as get_historical_data_sync.
+    """
+    import requests
+    import time as _time
+
+    symbol      = symbol.upper().strip()
+    bi_interval = VALID_INTERVALS.get(interval, interval)
+    chunk_size  = 1000          # Binance hard limit per call
+    url         = f"{BINANCE_BASE}/api/v3/klines"
+
+    all_klines = []
+    end_time   = None           # Walk backwards using endTime
+
+    while len(all_klines) < total_candles:
+        remaining = total_candles - len(all_klines)
+        fetch_n   = min(chunk_size, remaining)
+
+        params = {
+            "symbol":   symbol,
+            "interval": bi_interval,
+            "limit":    fetch_n,
+        }
+        if end_time is not None:
+            params["endTime"] = end_time  # fetch candles ending before this timestamp (ms)
+
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code != 200:
+                print(f"[-] Binance error ({symbol}): {resp.text}")
+                break
+            chunk = resp.json()
+        except Exception as e:
+            print(f"[-] Request failed ({symbol}): {e}")
+            break
+
+        if not chunk:
+            break
+
+        # Prepend (we're walking backwards)
+        all_klines = chunk + all_klines
+
+        # Move end_time to just before the earliest candle in this chunk
+        end_time = chunk[0][0] - 1  # open_time of oldest candle minus 1 ms
+
+        if len(chunk) < fetch_n:
+            break   # No more history available
+
+        _time.sleep(0.15)  # Respect Binance rate limit (~6 req/s)
+
+    if not all_klines:
+        return {"error": f"No data returned for {symbol}"}
+
+    candles = []
+    for kline in all_klines:
+        candles.append({
+            "timestamp":    datetime.fromtimestamp(kline[0] / 1000).strftime("%Y-%m-%d %H:%M:%S"),
+            "open":         float(kline[1]),
+            "high":         float(kline[2]),
+            "low":          float(kline[3]),
+            "close":        float(kline[4]),
+            "volume":       float(kline[5]),
+            "quote_volume": float(kline[7]),
+            "trades":       int(kline[8]),
+        })
+
+    print(f"[+] Fetched {len(candles)} candles for {symbol} @ {interval}")
+    return {
+        "symbol":        symbol,
+        "interval":      interval,
+        "candle_count":  len(candles),
+        "candles":       candles,
+        "latest_price":  candles[-1]["close"] if candles else None,
+        "latest_volume": candles[-1]["volume"] if candles else None,
+    }
+
+
 async def stream_live_price(symbol: str) -> AsyncGenerator[dict, None]:
     """
     Stream real-time price updates via Binance WebSocket.
